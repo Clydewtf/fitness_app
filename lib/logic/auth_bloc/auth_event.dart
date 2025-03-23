@@ -19,5 +19,19 @@ class SaveUser extends AuthEvent {
   List<Object?> get props => [user];
 }
 
+// Событие: проверка входа
+class CheckLoginStatus extends AuthEvent {}
+
+// Событие: вход пользователя
+class LoginUser extends AuthEvent {
+  final String email;
+  final String password;
+
+  LoginUser(this.email, this.password);
+
+  @override
+  List<Object?> get props => [email, password];
+}
+
 // Событие: выход пользователя
-class Logout extends AuthEvent {}
+class LogoutUser extends AuthEvent {}

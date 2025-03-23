@@ -28,3 +28,26 @@ class AuthError extends AuthState {
   @override
   List<Object?> get props => [message];
 }
+
+// Пользователь вошел
+class Authenticated extends AuthState {
+  final UserModel user;
+
+  Authenticated(this.user);
+
+  @override
+  List<Object?> get props => [user];
+}
+
+// Пользователь не вошел
+class Unauthenticated extends AuthState {}
+
+// Ошибка входа
+class AuthFailure extends AuthState {
+  final String message;
+
+  AuthFailure(this.message);
+
+  @override
+  List<Object?> get props => [message];
+}

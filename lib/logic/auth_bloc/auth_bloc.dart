@@ -10,7 +10,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   AuthBloc(this.userRepository) : super(AuthInitial()) {
     on<LoadUser>(_onLoadUser);
     on<SaveUser>(_onSaveUser);
-    on<Logout>(_onLogout);
+    on<LogoutUser>(_onLogoutUser);
+    on<CheckLoginStatus>(_onCheckLoginStatus);
+    on<LoginUser>(_onLoginUser);
   }
 
   // Загрузка пользователя
@@ -38,8 +40,38 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   // Выход пользователя
-  Future<void> _onLogout(Logout event, Emitter<AuthState> emit) async {
+  Future<void> _onLogoutUser(LogoutUser event, Emitter<AuthState> emit) async {
     await userRepository.clearUser();
-    emit(AuthInitial());
+    emit(Unauthenticated());
+  }
+
+  // Проверка, вошел ли пользователь
+  Future<void> _onCheckLoginStatus(CheckLoginStatus event, Emitter<AuthState> emit) async {
+    final isLoggedIn = await userRepository.isLoggedIn();
+    if (isLoggedIn) {
+      final user = await userRepository.loadUser();
+      if (user != null) {
+        emit(Authenticated(user));
+      } else {
+        emit(Unauthenticated());
+      }
+    } else {
+      emit(Unauthenticated());
+    }
+  }
+
+  // Вход пользователя
+  Future<void> _onLoginUser(LoginUser event, Emitter<AuthState> emit) async {
+    final success = await userRepository.login(event.email, event.password);
+    if (success) {
+      final user = await userRepository.loadUser();
+      if (user != null) {
+        emit(Authenticated(user));
+      } else {
+        emit(AuthFailure("Ошибка загрузки пользователя"));
+      }
+    } else {
+      emit(AuthFailure("Неверный email или пароль"));
+    }
   }
 }
