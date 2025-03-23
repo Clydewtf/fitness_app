@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../home/home_screen.dart';
+import '../auth/register_screen.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
 import '../../../logic/auth_bloc/auth_event.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
@@ -39,8 +40,9 @@ class _LoginScreenState extends State<LoginScreen> {
             BlocConsumer<AuthBloc, AuthState>(
               listener: (context, state) {
                 if (state is AuthFailure) {
-                  ScaffoldMessenger.of(context)
-                      .showSnackBar(SnackBar(content: Text(state.message)));
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(state.message)));
+                  context.read<AuthBloc>().add(ResetAuthState());
                 } else if (state is Authenticated) {
                   Navigator.pushReplacement(
                     context,
@@ -59,9 +61,12 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
             ),
-            TextButton(
+            TextButton( 
               onPressed: () {
-                // TODO: Реализовать переход на экран регистрации
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                );
               },
               child: const Text("Еще нет аккаунта? Зарегистрироваться"),
             ),
@@ -80,6 +85,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
                 
                 context.read<AuthBloc>().add(SaveUser(testUser));
+                ScaffoldMessenger.of(context).hideCurrentSnackBar();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text("Тестовый пользователь создан!")),
                 );

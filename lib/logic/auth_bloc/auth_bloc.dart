@@ -13,6 +13,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutUser>(_onLogoutUser);
     on<CheckLoginStatus>(_onCheckLoginStatus);
     on<LoginUser>(_onLoginUser);
+    on<ResetAuthState>((event, emit) {
+      emit(AuthInitial());
+    });
   }
 
   // Загрузка пользователя
@@ -48,13 +51,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   // Проверка, вошел ли пользователь
   Future<void> _onCheckLoginStatus(CheckLoginStatus event, Emitter<AuthState> emit) async {
     final isLoggedIn = await userRepository.isLoggedIn();
-    if (isLoggedIn) {
-      final user = await userRepository.loadUser();
-      if (user != null) {
-        emit(Authenticated(user));
-      } else {
-        emit(Unauthenticated());
-      }
+    final user = await userRepository.loadUser();
+
+    if (isLoggedIn && user != null) {
+      emit(Authenticated(user));
     } else {
       emit(Unauthenticated());
     }

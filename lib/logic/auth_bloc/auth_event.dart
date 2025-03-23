@@ -35,3 +35,6 @@ class LoginUser extends AuthEvent {
 
 // Событие: выход пользователя
 class LogoutUser extends AuthEvent {}
+
+// Сброс ошибки после отображения
+class ResetAuthState extends AuthEvent {}

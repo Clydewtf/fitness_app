@@ -1,33 +1,34 @@
 class UserModel {
   final String id;
-  final String name;
   final String email;
   final String password; // Для локальной авторизации
-  final int age;
-  final double weight;
-  final double height;
-  final String goal; // "mass", "cut", "strength"
+
+  final String? name;
+  final int? age;
+  final double? weight;
+  final double? height;
+  final String? goal; // "mass", "cut", "strength"
 
   UserModel({
     required this.id,
-    required this.name,
     required this.email,
     required this.password,
-    required this.age,
-    required this.weight,
-    required this.height,
-    required this.goal,
+    this.name,
+    this.age,
+    this.weight,
+    this.height,
+    this.goal,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'],
-      name: json['name'],
       email: json['email'],
       password: json['password'],
+      name: json['name'],
       age: json['age'],
-      weight: json['weight'].toDouble(),
-      height: json['height'].toDouble(),
+      weight: (json['weight'] != null) ? json['weight'].toDouble() : null,
+      height: (json['height'] != null) ? json['height'].toDouble() : null,
       goal: json['goal'],
     );
   }
@@ -35,9 +36,9 @@ class UserModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'name': name,
       'email': email,
       'password': password,
+      'name': name,
       'age': age,
       'weight': weight,
       'height': height,

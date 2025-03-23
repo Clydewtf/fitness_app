@@ -41,10 +41,15 @@ class UserRepository {
     final user = UserModel.fromJson(jsonDecode(userJson));
 
     if (user.email == email && user.password == password) {
-      await prefs.setBool(_loggedInKey, true);
+      await setLoggedIn(true);
       return true;
     }
     
     return false;
+  }
+
+  Future<void> setLoggedIn(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_loggedInKey, value);
   }
 } 

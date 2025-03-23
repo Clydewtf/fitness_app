@@ -34,7 +34,6 @@ class MyApp extends StatelessWidget {
 }
 
 // Виджет-обертка, который проверяет статус входа
-// TODO: Это виджет, его же в Widgets надо закинуть?
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
