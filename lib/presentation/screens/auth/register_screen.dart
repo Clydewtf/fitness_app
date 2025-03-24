@@ -49,9 +49,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text("Регистрация успешна! Теперь войдите в аккаунт.")),
                   );
-                  Navigator.pushReplacement(
+                  Navigator.pushAndRemoveUntil(
                     context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen())
+                    MaterialPageRoute(builder: (context) => const LoginScreen()),
+                    (route) => false,
                   );
                 }
               },

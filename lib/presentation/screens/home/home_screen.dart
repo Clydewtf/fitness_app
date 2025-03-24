@@ -49,42 +49,99 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      resizeToAvoidBottomInset: false,
-      body: _screens[_selectedIndex], // Отображаем активный экран
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          // TODO: Реализовать экран быстрого добавления данных
-        },
-        shape: const CircleBorder(),
-        backgroundColor: Colors.blue,
-        child: const Icon(Icons.add, size: 30, color: Colors.white),
+      body: Stack(
+        children: [
+          _screens[_selectedIndex], // Показываем активный экран
+
+          // Нижняя панель с навигацией
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(20),
+                  topRight: Radius.circular(20),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.15),
+                    blurRadius: 10,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildNavItem(Icons.fitness_center, "Тренировки", 0),
+                  _buildNavItem(Icons.fastfood, "Питание", 1),
+                  const SizedBox(width: 70), // Оставляем место под "плюс"
+                  _buildNavItem(Icons.bar_chart, "Прогресс", 2),
+                  _buildNavItem(Icons.person, "Профиль", 3),
+                ],
+              ),
+            ),
+          ),
+
+          // Кнопка "Плюс" по центру
+          Positioned(
+            bottom: 10, // Чуть выше, чтобы не перекрывать навигацию
+            left: MediaQuery.of(context).size.width / 2 - 30,
+            child: FloatingActionButton(
+              onPressed: () {
+                // TODO: Открыть экран быстрого добавления
+              },
+              shape: const CircleBorder(),
+              backgroundColor: Colors.blue,
+              elevation: 8,
+              child: const Icon(Icons.add, size: 35, color: Colors.white),
+            ),
+          ),
+        ],
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked, // Центрируем кнопку
-      bottomNavigationBar: BottomAppBar(
-        shape: const CircularNotchedRectangle(), // Форма для FAB
-        notchMargin: 6.0, // Отступ между FAB и баром
-        child: BottomNavigationBar(
-          currentIndex: _selectedIndex,
-          onTap: _onItemTapped,
-          type: BottomNavigationBarType.fixed, // Чтобы текст не исчезал
-          items: const [
-            BottomNavigationBarItem(
-              icon: Icon(Icons.fitness_center),
-              label: "Тренировки",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.fastfood),
-              label: "Питание",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.bar_chart),
-              label: "Прогресс",
-            ),
-            BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: "Профиль",
-            ),
-          ],
+    );
+  }
+
+  Widget _buildNavItem(IconData icon, String label, int index) {
+    return Expanded(
+      child: InkWell(
+        onTap: () => _onItemTapped(index), // Делаем кнопку кликабельной
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.symmetric(vertical: 6),
+          decoration: BoxDecoration(
+            color: _selectedIndex == index ? Colors.blueGrey.withValues(alpha: 0.1) : Colors.transparent,
+            borderRadius: BorderRadius.circular(15),
+            boxShadow: [
+              if (_selectedIndex == index)
+                BoxShadow(
+                  color: Colors.blue.withValues(alpha: 0.05),
+                  blurRadius: 6,
+                  spreadRadius: -2,
+                  offset: const Offset(0, 2),
+                  blurStyle: BlurStyle.normal,
+                )
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                icon,
+                color: _selectedIndex == index ? Colors.blue : Colors.grey,
+              ),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: _selectedIndex == index ? Colors.blue : Colors.grey,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
