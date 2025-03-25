@@ -66,7 +66,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const RegisterScreen()),
-                  // TODO: Тут при переходе, у нас есть стрелочка назад. Но она сохраняется потом везде, надо убирать
                 );
               },
               child: const Text("Еще нет аккаунта? Зарегистрироваться"),
