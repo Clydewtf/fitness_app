@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import '../../data/models/user_model.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 abstract class AuthState extends Equatable {
   @override
@@ -9,9 +9,12 @@ abstract class AuthState extends Equatable {
 // Начальное состояние (ничего не загружено)
 class AuthInitial extends AuthState {}
 
+// Состояние загрузки (при входе, регистрации)
+class AuthLoading extends AuthState {}
+
 // Состояние: пользователь загружен
 class AuthLoaded extends AuthState {
-  final UserModel user;
+  final User user;
 
   AuthLoaded(this.user);
 
@@ -31,7 +34,7 @@ class AuthError extends AuthState {
 
 // Пользователь вошел
 class Authenticated extends AuthState {
-  final UserModel user;
+  final User user;
 
   Authenticated(this.user);
 

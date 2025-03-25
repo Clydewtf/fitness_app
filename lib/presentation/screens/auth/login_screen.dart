@@ -5,7 +5,6 @@ import '../auth/register_screen.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
 import '../../../logic/auth_bloc/auth_event.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
-import '../../../data/models/user_model.dart'; //TODO: Убрать это, пока тестовое создание юзера
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -69,28 +68,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
               child: const Text("Еще нет аккаунта? Зарегистрироваться"),
-            ),
-            //TODO: Убрать, тестовое создание юзера
-            TextButton(
-              onPressed: () {
-                final testUser = UserModel(
-                  id: "1",
-                  name: "Test User",
-                  email: "test@example.com",
-                  password: "12345678",
-                  age: 25,
-                  weight: 70.0,
-                  height: 175.0,
-                  goal: "mass",
-                );
-                
-                context.read<AuthBloc>().add(SaveUser(testUser));
-                ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Тестовый пользователь создан!")),
-                );
-              },
-              child: const Text("Создать тестового пользователя"),
             ),
           ],
         ),
