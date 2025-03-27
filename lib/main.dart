@@ -10,10 +10,13 @@ import 'logic/nutrition_bloc/nutrition_bloc.dart';
 import 'logic/notification_bloc/notification_bloc.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  // Инициализация уведомлений
+  await NotificationService().init();
 
   setupLocator(); // Инициализируем DI перед запуском приложения
   runApp(const MyApp());

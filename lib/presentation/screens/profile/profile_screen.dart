@@ -127,6 +127,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 const SizedBox(height: 20),
 
+                // TODO: Убрать это, тестовое уведомление
+                ElevatedButton(
+                  onPressed: () async {
+                    print("Отправка уведомления...");
+                    await NotificationService().showInstantNotification("Тест", "Это тестовое уведомление!");
+                    print("Уведомление отправлено!");
+                  },
+                  child: const Text("Тест уведомления"),
+                ),
+
                 // Выход из аккаунта
                 TextButton(
                   onPressed: () {
