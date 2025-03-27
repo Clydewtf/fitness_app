@@ -8,6 +8,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
 import '../../../services/notification_service.dart';
 import '../auth/login_screen.dart';
+import '../notifications/notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -21,9 +22,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _weightController = TextEditingController();
   final TextEditingController _heightController = TextEditingController();
   final UserService _userService = UserService();
-  final NotificationService _notificationService = NotificationService();
-  bool _notificationsEnabled = false;
-  String _notificationTime = "12:00";
   String _selectedGoal = 'Поддержание формы';
   String? _profileImagePath;
 
@@ -31,7 +29,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void initState() {
     super.initState();
     _loadUserData();
-    _loadNotificationSettings();
   }
 
   @override
@@ -110,32 +107,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 const Text("Настройки уведомлений", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 10),
 
-                // Включение/выключение уведомлений
-                SwitchListTile(
-                  title: const Text("Напоминания о тренировках"),
-                  value: _notificationsEnabled,
-                  onChanged: _updateNotifications,
-                ),
-
-                // Выбор времени уведомления
                 ListTile(
-                  title: const Text("Время напоминания"),
-                  subtitle: Text(_notificationTime),
-                  trailing: const Icon(Icons.access_time),
-                  onTap: _selectNotificationTime,
+                  title: const Text("Уведомления"),
+                  trailing: const Icon(Icons.notifications),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 20),
-
-                // TODO: Убрать это, тестовое уведомление
-                ElevatedButton(
-                  onPressed: () async {
-                    print("Отправка уведомления...");
-                    await NotificationService().showInstantNotification("Тест", "Это тестовое уведомление!");
-                    print("Уведомление отправлено!");
-                  },
-                  child: const Text("Тест уведомления"),
-                ),
 
                 // Выход из аккаунта
                 TextButton(
@@ -221,40 +204,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setState(() {
         _profileImagePath = savedPath;
       });
-    }
-  }
-
-  Future<void> _loadNotificationSettings() async {
-    bool isEnabled = await _notificationService.getNotificationsEnabled();
-    String? savedTime = await _notificationService.getNotificationTime();
-    setState(() {
-      _notificationsEnabled = isEnabled;
-      _notificationTime = savedTime ?? "12:00";
-    });
-  }
-
-  Future<void> _updateNotifications(bool value) async {
-    setState(() {
-      _notificationsEnabled = value;
-    });
-    await _notificationService.setNotificationsEnabled(value);
-  }
-
-  Future<void> _selectNotificationTime() async {
-    TimeOfDay? pickedTime = await showTimePicker(
-      context: context,
-      initialTime: TimeOfDay(
-        hour: int.parse(_notificationTime.split(":")[0]),
-        minute: int.parse(_notificationTime.split(":")[1]),
-      ),
-    );
-
-    if (pickedTime != null) {
-      String formattedTime = "${pickedTime.hour}:${pickedTime.minute.toString().padLeft(2, '0')}";
-      setState(() {
-        _notificationTime = formattedTime;
-      });
-      await _notificationService.setNotificationTime(formattedTime);
     }
   }
 }

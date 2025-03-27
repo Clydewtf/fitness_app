@@ -1,108 +1,85 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:timezone/data/latest_all.dart' as tz;
-import 'package:timezone/timezone.dart' as tz;
 import 'notification_event.dart';
 import 'notification_state.dart';
+import 'package:fitness_app/services/notification_service.dart';
 
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
-  final FlutterLocalNotificationsPlugin notificationsPlugin =
-      FlutterLocalNotificationsPlugin();
+  final NotificationService _notificationService;
 
-  NotificationBloc() : super(NotificationInitial()) {
-    tz.initializeTimeZones();
-    on<RequestNotificationPermission>(_onRequestPermission);
-    on<ScheduleWorkoutNotification>(_onScheduleWorkoutNotification);
-    on<ScheduleMealNotification>(_onScheduleMealNotification);
-    on<CancelAllNotifications>(_onCancelAllNotifications);
+  NotificationBloc(this._notificationService) : super(NotificationInitial()) {
+    on<LoadNotificationsEvent>(_onLoadNotifications);
+    on<AddNotificationBlockEvent>(_onAddNotificationBlock);
+    on<RemoveNotificationBlockEvent>(_onRemoveNotificationBlock);
+    on<EditNotificationBlockEvent>(_onEditNotificationBlock);
+    on<ScheduleNotification>(_onScheduleNotification);
+    on<CancelNotification>(_onCancelNotification);
   }
 
-  // Запрос разрешения на отправку уведомлений
-  Future<void> _onRequestPermission(
-      RequestNotificationPermission event, Emitter<NotificationState> emit) async {
-    final androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    final iosSettings = DarwinInitializationSettings();
+  void _onLoadNotifications(LoadNotificationsEvent event, Emitter<NotificationState> emit) {
+    emit(NotificationsLoaded([])); // Пока просто загружаем пустой список
+  }
 
-    final settings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
+  void _onAddNotificationBlock(AddNotificationBlockEvent event, Emitter<NotificationState> emit) {
+    if (state is NotificationsLoaded) {
+      final updatedBlocks = List<NotificationBlock>.from((state as NotificationsLoaded).blocks)
+        ..add(event.block);
+      emit(NotificationsLoaded(updatedBlocks));
+    }
+  }
+
+  void _onRemoveNotificationBlock(RemoveNotificationBlockEvent event, Emitter<NotificationState> emit) {
+    if (state is NotificationsLoaded) {
+      final updatedBlocks = (state as NotificationsLoaded).blocks.where((b) => b.id != event.id).toList();
+      emit(NotificationsLoaded(updatedBlocks));
+    }
+  }
+
+  void _onEditNotificationBlock(EditNotificationBlockEvent event, Emitter<NotificationState> emit) {
+    if (state is NotificationsLoaded) {
+      final updatedBlocks = (state as NotificationsLoaded).blocks.map((b) {
+        return b.id == event.block.id ? event.block : b;
+      }).toList();
+      emit(NotificationsLoaded(updatedBlocks));
+    }
+  }
+
+  Future<void> _onScheduleNotification(ScheduleNotification event, Emitter<NotificationState> emit) async {
+    await _notificationService.scheduleNotification(
+      id: event.id,
+      title: event.title,
+      body: event.body,
+      scheduledTime: event.scheduledDate,
     );
-
-    await notificationsPlugin.initialize(settings);
   }
 
-  // Запланировать уведомление о тренировке
-  Future<void> _onScheduleWorkoutNotification(
-      ScheduleWorkoutNotification event, Emitter<NotificationState> emit) async {
-    try {
-      final androidDetails = AndroidNotificationDetails(
-        'workout_channel', 'Тренировки',
-        importance: Importance.high, priority: Priority.high,
-      );
+  Future<void> _onCancelNotification(CancelNotification event, Emitter<NotificationState> emit) async {
+    await _notificationService.cancelNotification(event.id);
+  }
+}
 
-      final iosDetails = DarwinNotificationDetails();
+class NotificationBlock {
+  final String id;
+  final List<String> days;
+  final List<String> times;
+  final String goal;
 
-      final details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
+  NotificationBlock({required this.id, required this.days, required this.times, required this.goal});
 
-      final tz.TZDateTime scheduledDate = tz.TZDateTime.from(event.dateTime, tz.local);
-
-      await notificationsPlugin.zonedSchedule(
-        1,
-        'Тренировка',
-        'Не забудь выполнить свою тренировку!',
-        scheduledDate,
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-
-      emit(NotificationScheduled("Уведомление о тренировке запланировано"));
-    } catch (e) {
-      emit(NotificationError("Ошибка при создании уведомления"));
-    }
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'days': days,
+      'times': times,
+      'goal': goal,
+    };
   }
 
-  // Запланировать уведомление о приеме пищи
-  Future<void> _onScheduleMealNotification(
-      ScheduleMealNotification event, Emitter<NotificationState> emit) async {
-    try {
-      final androidDetails = AndroidNotificationDetails(
-        'meal_channel', 'Прием пищи',
-        importance: Importance.high, priority: Priority.high,
-      );
-
-      final iosDetails = DarwinNotificationDetails();
-
-      final details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      final tz.TZDateTime scheduledDate = tz.TZDateTime.from(event.dateTime, tz.local);
-
-      await notificationsPlugin.zonedSchedule(
-        2,
-        'Прием пищи',
-        'Время покушать!',
-        scheduledDate,
-        details,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        matchDateTimeComponents: DateTimeComponents.time,
-      );
-
-      emit(NotificationScheduled("Уведомление о приеме пищи запланировано"));
-    } catch (e) {
-      emit(NotificationError("Ошибка при создании уведомления"));
-    }
-  }
-
-  // Отмена всех уведомлений
-  Future<void> _onCancelAllNotifications(
-      CancelAllNotifications event, Emitter<NotificationState> emit) async {
-    await notificationsPlugin.cancelAll();
-    emit(NotificationInitial());
+  factory NotificationBlock.fromJson(Map<String, dynamic> json) {
+    return NotificationBlock(
+      id: json['id'],
+      days: List<String>.from(json['days']),
+      times: List<String>.from(json['times']),
+      goal: json['goal'],
+    );
   }
 }

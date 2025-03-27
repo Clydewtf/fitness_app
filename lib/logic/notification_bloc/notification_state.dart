@@ -1,29 +1,26 @@
 import 'package:equatable/equatable.dart';
+import 'notification_bloc.dart';
 
 abstract class NotificationState extends Equatable {
+  final List<NotificationBlock> blocks;
+  const NotificationState({required this.blocks});
+
   @override
-  List<Object?> get props => [];
+  List<Object> get props => [blocks];
 }
 
-// Начальное состояние (уведомления не настроены)
-class NotificationInitial extends NotificationState {}
+class NotificationInitial extends NotificationState {
+  NotificationInitial() : super(blocks: []);
+}
 
-// Уведомления успешно запланированы
+class NotificationsLoaded extends NotificationState {
+  const NotificationsLoaded(List<NotificationBlock> blocks) : super(blocks: blocks);
+}
+
 class NotificationScheduled extends NotificationState {
-  final String message;
-
-  NotificationScheduled(this.message);
-
-  @override
-  List<Object?> get props => [message];
+  const NotificationScheduled(List<NotificationBlock> blocks) : super(blocks: blocks);
 }
 
-// Ошибка при настройке уведомлений
-class NotificationError extends NotificationState {
-  final String error;
-
-  NotificationError(this.error);
-
-  @override
-  List<Object?> get props => [error];
+class NotificationCancelled extends NotificationState {
+  const NotificationCancelled(List<NotificationBlock> blocks) : super(blocks: blocks);
 }

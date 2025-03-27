@@ -1,32 +1,53 @@
 import 'package:equatable/equatable.dart';
+import 'notification_bloc.dart';
 
 abstract class NotificationEvent extends Equatable {
   @override
-  List<Object?> get props => [];
+  List<Object> get props => [];
 }
 
-// Запрос разрешения на отправку уведомлений
-class RequestNotificationPermission extends NotificationEvent {}
+class LoadNotificationsEvent extends NotificationEvent {}
 
-// Запланировать напоминание о тренировке
-class ScheduleWorkoutNotification extends NotificationEvent {
-  final DateTime dateTime;
-
-  ScheduleWorkoutNotification(this.dateTime);
+class AddNotificationBlockEvent extends NotificationEvent {
+  final NotificationBlock block;
+  AddNotificationBlockEvent(this.block);
 
   @override
-  List<Object?> get props => [dateTime];
+  List<Object> get props => [block];
 }
 
-// Запланировать напоминание о приеме пищи
-class ScheduleMealNotification extends NotificationEvent {
-  final DateTime dateTime;
-
-  ScheduleMealNotification(this.dateTime);
+class RemoveNotificationBlockEvent extends NotificationEvent {
+  final String id;
+  RemoveNotificationBlockEvent(this.id);
 
   @override
-  List<Object?> get props => [dateTime];
+  List<Object> get props => [id];
 }
 
-// Удалить все запланированные уведомления
-class CancelAllNotifications extends NotificationEvent {}
+class EditNotificationBlockEvent extends NotificationEvent {
+  final NotificationBlock block;
+  EditNotificationBlockEvent(this.block);
+
+  @override
+  List<Object> get props => [block];
+}
+
+class ScheduleNotification extends NotificationEvent {
+  final int id;
+  final String title;
+  final String body;
+  final DateTime scheduledDate;
+
+  ScheduleNotification({required this.id, required this.title, required this.body, required this.scheduledDate});
+
+  @override
+  List<Object> get props => [id, title, body, scheduledDate];
+}
+
+class CancelNotification extends NotificationEvent {
+  final int id;
+  CancelNotification(this.id);
+
+  @override
+  List<Object> get props => [id];
+}

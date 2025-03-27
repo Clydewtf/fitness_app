@@ -7,6 +7,7 @@ import '../logic/auth_bloc/auth_bloc.dart';
 import '../logic/workout_bloc/workout_bloc.dart';
 import '../logic/nutrition_bloc/nutrition_bloc.dart';
 import '../logic/notification_bloc/notification_bloc.dart';
+import '../services/notification_service.dart';
 
 final GetIt locator = GetIt.instance;
 
@@ -14,6 +15,7 @@ void setupLocator() {
   // Регистрация сервисов
   locator.registerLazySingleton<AuthService>(() => AuthService());
   locator.registerLazySingleton<UserService>(() => UserService());
+  locator.registerLazySingleton<NotificationService>(() => NotificationService());
 
   // Регистрация репозиториев (синглтоны)
   locator.registerLazySingleton<WorkoutRepository>(() => WorkoutRepository());
@@ -23,5 +25,5 @@ void setupLocator() {
   locator.registerFactory(() => AuthBloc(locator<AuthService>()));
   locator.registerFactory(() => WorkoutBloc(locator<WorkoutRepository>()));
   locator.registerFactory(() => NutritionBloc(locator<NutritionRepository>()));
-  locator.registerFactory(() => NotificationBloc());
+  locator.registerFactory(() => NotificationBloc(locator<NotificationService>()));
 }
