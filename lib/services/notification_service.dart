@@ -1,10 +1,13 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
+import '../logic/notification_bloc/notification_bloc.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
+  static const String _notificationsKey = "notifications";
   factory NotificationService() => _instance;
   NotificationService._internal();
 
@@ -19,6 +22,8 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(initializationSettings);
     tz.initializeTimeZones();
   }
+
+  // TODO: Реальную логику уведомлений отправки. Вроде по уведомлениям всё, можно дальше???
 
   Future<void> scheduleNotification({
     required int id,
@@ -43,6 +48,20 @@ class NotificationService {
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
     );
+  }
+
+  Future<void> saveNotifications(List<NotificationBlock> notifications) async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String> jsonList = notifications.map((block) => jsonEncode(block.toJson())).toList();
+    await prefs.setStringList(_notificationsKey, jsonList);
+  }
+
+  Future<List<NotificationBlock>> loadNotifications() async {
+    final prefs = await SharedPreferences.getInstance();
+    List<String>? jsonList = prefs.getStringList(_notificationsKey);
+
+    if (jsonList == null) return [];
+    return jsonList.map((json) => NotificationBlock.fromJson(jsonDecode(json))).toList();
   }
 
   Future<void> cancelNotification(int id) async {

@@ -2,6 +2,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'notification_event.dart';
 import 'notification_state.dart';
 import 'package:fitness_app/services/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final NotificationService notificationService;
@@ -15,33 +16,35 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<CancelNotification>(_onCancelNotification);
   }
 
-  void _onLoadNotifications(LoadNotificationsEvent event, Emitter<NotificationState> emit) {
-    print("⏳ Загрузка уведомлений началась");
-    emit(NotificationsLoaded([])); // Пока просто загружаем пустой список
-    print("✅ Уведомления загружены");
+  void _onLoadNotifications(LoadNotificationsEvent event, Emitter<NotificationState> emit) async {
+    List<NotificationBlock> notifications = await notificationService.loadNotifications();
+    emit(NotificationsLoaded(notifications));
   }
 
-  void _onAddNotificationBlock(AddNotificationBlockEvent event, Emitter<NotificationState> emit) {
+  void _onAddNotificationBlock(AddNotificationBlockEvent event, Emitter<NotificationState> emit) async {
     if (state is NotificationsLoaded) {
       final updatedBlocks = List<NotificationBlock>.from((state as NotificationsLoaded).blocks)
         ..add(event.block);
       emit(NotificationsLoaded(updatedBlocks));
+      await notificationService.saveNotifications(updatedBlocks);
     }
   }
 
-  void _onRemoveNotificationBlock(RemoveNotificationBlockEvent event, Emitter<NotificationState> emit) {
+  void _onRemoveNotificationBlock(RemoveNotificationBlockEvent event, Emitter<NotificationState> emit) async {
     if (state is NotificationsLoaded) {
       final updatedBlocks = (state as NotificationsLoaded).blocks.where((b) => b.id != event.id).toList();
       emit(NotificationsLoaded(updatedBlocks));
+      await notificationService.saveNotifications(updatedBlocks);
     }
   }
 
-  void _onEditNotificationBlock(EditNotificationBlockEvent event, Emitter<NotificationState> emit) {
+  void _onEditNotificationBlock(EditNotificationBlockEvent event, Emitter<NotificationState> emit) async {
     if (state is NotificationsLoaded) {
       final updatedBlocks = (state as NotificationsLoaded).blocks.map((b) {
         return b.id == event.block.id ? event.block : b;
       }).toList();
       emit(NotificationsLoaded(updatedBlocks));
+      await notificationService.saveNotifications(updatedBlocks);
     }
   }
 

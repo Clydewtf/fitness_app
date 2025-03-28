@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/notification_bloc/notification_bloc.dart';
 import '../../../logic/notification_bloc/notification_event.dart';
-import '../../widgets/notifications/multi_select_days_dialog.dart';
 
 class CreateNotificationBlockDialog extends StatefulWidget {
   const CreateNotificationBlockDialog({super.key});
@@ -12,9 +11,11 @@ class CreateNotificationBlockDialog extends StatefulWidget {
 }
 
 class _CreateNotificationBlockDialogState extends State<CreateNotificationBlockDialog> {
-  final TextEditingController _goalController = TextEditingController();
+  String? _selectedGoal;
   List<String> _selectedDays = [];
   List<String> _selectedTimes = [];
+
+  final List<String> _goals = ['Тренировка', 'Питание', 'Оплата'];
 
   @override
   Widget build(BuildContext context) {
@@ -23,19 +24,58 @@ class _CreateNotificationBlockDialogState extends State<CreateNotificationBlockD
       content: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          TextField(
-            controller: _goalController,
+          // Выбор цели (goal)
+          DropdownButtonFormField<String>(
             decoration: const InputDecoration(labelText: "Цель"),
+            value: _selectedGoal,
+            items: _goals.map((goal) {
+              return DropdownMenuItem(value: goal, child: Text(goal));
+            }).toList(),
+            onChanged: (value) {
+              setState(() {
+                _selectedGoal = value;
+              });
+            },
           ),
           const SizedBox(height: 10),
-          ElevatedButton(
-            onPressed: _selectDays,
-            child: const Text("Выбрать дни"),
+
+          // Выбор дней (ChoiceChip)
+          Wrap(
+            spacing: 5,
+            children: ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"].map((day) {
+              return ChoiceChip(
+                label: Text(day),
+                selected: _selectedDays.contains(day),
+                onSelected: (selected) {
+                  setState(() {
+                    selected ? _selectedDays.add(day) : _selectedDays.remove(day);
+                  });
+                },
+              );
+            }).toList(),
           ),
           const SizedBox(height: 10),
+
+          // Выбор времени
           ElevatedButton(
             onPressed: _selectTime,
             child: const Text("Выбрать время"),
+          ),
+          const SizedBox(height: 10),
+
+          // Отображение выбранного времени
+          Wrap(
+            spacing: 5,
+            children: _selectedTimes.map((time) {
+              return Chip(
+                label: Text(time),
+                onDeleted: () {
+                  setState(() {
+                    _selectedTimes.remove(time);
+                  });
+                },
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -44,35 +84,12 @@ class _CreateNotificationBlockDialogState extends State<CreateNotificationBlockD
           onPressed: () => Navigator.pop(context),
           child: const Text("Отмена"),
         ),
-        TextButton(
-          onPressed: () {
-            final newBlock = NotificationBlock(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              goal: _goalController.text,
-              days: _selectedDays,
-              times: _selectedTimes,
-            );
-            context.read<NotificationBloc>().add(AddNotificationBlockEvent(newBlock));
-            Navigator.pop(context);
-          },
+        ElevatedButton(
+          onPressed: _saveNotificationBlock,
           child: const Text("Создать"),
         ),
       ],
     );
-  }
-
-  void _selectDays() async {
-    List<String> allDays = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
-    List<String> selectedDays = await showDialog(
-      context: context,
-      builder: (context) => MultiSelectDialog(allDays),
-    );
-
-    if (selectedDays.isNotEmpty) {
-      setState(() {
-        _selectedDays = selectedDays;
-      });
-    }
   }
 
   void _selectTime() async {
@@ -83,5 +100,22 @@ class _CreateNotificationBlockDialogState extends State<CreateNotificationBlockD
         _selectedTimes.add("${pickedTime.hour}:${pickedTime.minute.toString().padLeft(2, '0')}");
       });
     }
+  }
+
+  void _saveNotificationBlock() {
+    if (_selectedGoal == null || _selectedDays.isEmpty || _selectedTimes.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Заполните все поля!")));
+      return;
+    }
+
+    final newBlock = NotificationBlock(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      goal: _selectedGoal!,
+      days: _selectedDays,
+      times: _selectedTimes,
+    );
+
+    context.read<NotificationBloc>().add(AddNotificationBlockEvent(newBlock));
+    Navigator.pop(context);
   }
 }
