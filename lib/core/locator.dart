@@ -25,5 +25,5 @@ void setupLocator() {
   locator.registerFactory(() => AuthBloc(locator<AuthService>()));
   locator.registerFactory(() => WorkoutBloc(locator<WorkoutRepository>()));
   locator.registerFactory(() => NutritionBloc(locator<NutritionRepository>()));
-  locator.registerFactory(() => NotificationBloc(locator<NotificationService>()));
+  locator.registerFactory(() => NotificationBloc(notificationService: locator<NotificationService>()));
 }

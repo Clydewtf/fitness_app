@@ -4,9 +4,9 @@ import 'notification_state.dart';
 import 'package:fitness_app/services/notification_service.dart';
 
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
-  final NotificationService _notificationService;
+  final NotificationService notificationService;
 
-  NotificationBloc(this._notificationService) : super(NotificationInitial()) {
+  NotificationBloc({required this.notificationService}) : super(NotificationInitial()) {
     on<LoadNotificationsEvent>(_onLoadNotifications);
     on<AddNotificationBlockEvent>(_onAddNotificationBlock);
     on<RemoveNotificationBlockEvent>(_onRemoveNotificationBlock);
@@ -16,7 +16,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }
 
   void _onLoadNotifications(LoadNotificationsEvent event, Emitter<NotificationState> emit) {
+    print("⏳ Загрузка уведомлений началась");
     emit(NotificationsLoaded([])); // Пока просто загружаем пустой список
+    print("✅ Уведомления загружены");
   }
 
   void _onAddNotificationBlock(AddNotificationBlockEvent event, Emitter<NotificationState> emit) {
@@ -44,7 +46,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }
 
   Future<void> _onScheduleNotification(ScheduleNotification event, Emitter<NotificationState> emit) async {
-    await _notificationService.scheduleNotification(
+    await notificationService.scheduleNotification(
       id: event.id,
       title: event.title,
       body: event.body,
@@ -53,7 +55,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }
 
   Future<void> _onCancelNotification(CancelNotification event, Emitter<NotificationState> emit) async {
-    await _notificationService.cancelNotification(event.id);
+    await notificationService.cancelNotification(event.id);
   }
 }
 

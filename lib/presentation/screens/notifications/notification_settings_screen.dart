@@ -8,8 +8,6 @@ import '../../widgets/notifications/create_notification_block_dialog.dart';
 class NotificationSettingsScreen extends StatelessWidget {
   const NotificationSettingsScreen({super.key});
 
-
-  // TODO: ошибка, запустить приложение, там напишется
   @override
   Widget build(BuildContext context) {
     return Scaffold(
