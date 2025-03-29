@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -15,6 +16,9 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
 
   Future<void> init() async {
+    // Запрашиваем разрешение на точные уведомления
+    await requestExactAlarmPermission(); 
+
     const AndroidInitializationSettings androidInitializationSettings =
         AndroidInitializationSettings('@mipmap/ic_launcher');
     const InitializationSettings initializationSettings =
@@ -23,7 +27,13 @@ class NotificationService {
     tz.initializeTimeZones();
   }
 
-  // TODO: Реальную логику уведомлений отправки. Вроде по уведомлениям всё, можно дальше???
+  Future<void> requestExactAlarmPermission() async {
+    if (await Permission.scheduleExactAlarm.request().isGranted) {
+      print("Разрешение на точные уведомления получено.");
+    } else {
+      print("Разрешение на точные уведомления НЕ получено!");
+    }
+  }
 
   Future<void> scheduleNotification({
     required int id,
@@ -31,8 +41,9 @@ class NotificationService {
     required String body,
     required DateTime scheduledTime,
   }) async {
+    int notificationId = id % 2147483647; // Уменьшаем id до 32-битного диапазона
     await flutterLocalNotificationsPlugin.zonedSchedule(
-      id,
+      notificationId,
       title,
       body,
       tz.TZDateTime.from(scheduledTime, tz.local),
@@ -64,8 +75,70 @@ class NotificationService {
     return jsonList.map((json) => NotificationBlock.fromJson(jsonDecode(json))).toList();
   }
 
+  Future<void> reloadScheduledNotifications() async {
+    List<NotificationBlock> notifications = await loadNotifications();
+
+    for (var block in notifications) {
+      for (var day in block.days) {
+        for (var time in block.times) {
+          try {
+            // Парсим часы и минуты из строки
+            List<String> timeParts = time.split(":");
+            int hour = int.parse(timeParts[0]);
+            int minute = int.parse(timeParts[1]);
+
+            // Определяем ближайшую дату для этого дня недели
+            DateTime scheduledDate = getNextDateForDay(day, hour, minute);
+
+            if (scheduledDate.isAfter(DateTime.now())) {
+              await scheduleNotification(
+                id: block.id.hashCode,
+                title: "Напоминание",
+                body: block.goal,
+                scheduledTime: scheduledDate,
+              );
+              print("Запланировано: ${block.goal} на $scheduledDate");
+            }
+          } catch (e) {
+            print("Ошибка при обработке уведомления: $e");
+          }
+        }
+      }
+    }
+  }
+
+  DateTime getNextDateForDay(String day, int hour, int minute) {
+    final now = DateTime.now();
+    int targetWeekday = _getWeekdayFromString(day);
+
+    // Определяем ближайшую дату
+    DateTime scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
+
+    // Если день уже прошел - переносим на следующую неделю
+    while (scheduledDate.weekday != targetWeekday || scheduledDate.isBefore(now)) {
+      scheduledDate = scheduledDate.add(Duration(days: 1));
+    }
+
+    return scheduledDate;
+  }
+
+  // Функция для конвертации строкового названия дня в int (понедельник - 1, воскресенье - 7)
+  int _getWeekdayFromString(String day) {
+    const Map<String, int> days = {
+      "Monday": DateTime.monday,
+      "Tuesday": DateTime.tuesday,
+      "Wednesday": DateTime.wednesday,
+      "Thursday": DateTime.thursday,
+      "Friday": DateTime.friday,
+      "Saturday": DateTime.saturday,
+      "Sunday": DateTime.sunday,
+    };
+    return days[day] ?? DateTime.monday; // Если ошибка, ставим понедельник
+  }
+
   Future<void> cancelNotification(int id) async {
-    await flutterLocalNotificationsPlugin.cancel(id);
+    int notificationId = id % 2147483647; // Приводим id к допустимому диапазону
+    await flutterLocalNotificationsPlugin.cancel(notificationId);
   }
 
   Future<void> cancelAllNotifications() async {

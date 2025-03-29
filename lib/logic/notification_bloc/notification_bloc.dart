@@ -27,6 +27,31 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         ..add(event.block);
       emit(NotificationsLoaded(updatedBlocks));
       await notificationService.saveNotifications(updatedBlocks);
+
+      for (var day in event.block.days) {
+        for (var time in event.block.times) {
+          try {
+            List<String> timeParts = time.split(":");
+            int hour = int.parse(timeParts[0]);
+            int minute = int.parse(timeParts[1]);
+
+            // Определяем ближайшую дату для этого дня
+            DateTime scheduledDate = notificationService.getNextDateForDay(day, hour, minute);
+            
+            if (scheduledDate.isAfter(DateTime.now())) {
+              await notificationService.scheduleNotification(
+                id: event.block.id.hashCode,
+                title: "Напоминание",
+                body: event.block.goal,
+                scheduledTime: scheduledDate,
+              );
+              print("Запланировано: ${event.block.goal} на $scheduledDate");
+            }
+          } catch (e) {
+            print("Ошибка при обработке времени уведомления: $e");
+          }
+        }
+      }
     }
   }
 
@@ -35,6 +60,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       final updatedBlocks = (state as NotificationsLoaded).blocks.where((b) => b.id != event.id).toList();
       emit(NotificationsLoaded(updatedBlocks));
       await notificationService.saveNotifications(updatedBlocks);
+      await notificationService.cancelNotification(int.parse(event.id));
     }
   }
 
@@ -45,6 +71,16 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       }).toList();
       emit(NotificationsLoaded(updatedBlocks));
       await notificationService.saveNotifications(updatedBlocks);
+
+      await notificationService.cancelNotification(int.parse(event.block.id));
+      for (var time in event.block.times) {
+        await notificationService.scheduleNotification(
+          id: int.parse(event.block.id),
+          title: event.block.goal,
+          body: "Напоминание о цели: ${event.block.goal}",
+          scheduledTime: DateTime.parse(time),
+        );
+      }
     }
   }
 

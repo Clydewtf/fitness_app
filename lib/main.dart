@@ -16,8 +16,10 @@ import 'services/notification_service.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  // Инициализация уведомлений
-  await NotificationService().init();
+
+  final notificationService = NotificationService();
+  await notificationService.init();
+  await notificationService.reloadScheduledNotifications();
 
   setupLocator(); // Инициализируем DI перед запуском приложения
   runApp(const MyApp());
