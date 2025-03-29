@@ -42,6 +42,7 @@ class NotificationService {
     required DateTime scheduledTime,
   }) async {
     int notificationId = id % 2147483647; // Уменьшаем id до 32-битного диапазона
+
     await flutterLocalNotificationsPlugin.zonedSchedule(
       notificationId,
       title,
@@ -76,6 +77,8 @@ class NotificationService {
   }
 
   Future<void> reloadScheduledNotifications() async {
+    await cancelAllNotifications(); // Очищаем перед загрузкой
+
     List<NotificationBlock> notifications = await loadNotifications();
 
     for (var block in notifications) {
@@ -89,15 +92,16 @@ class NotificationService {
 
             // Определяем ближайшую дату для этого дня недели
             DateTime scheduledDate = getNextDateForDay(day, hour, minute);
+            int notificationId = "${block.id}${hour}${minute}".hashCode;
 
             if (scheduledDate.isAfter(DateTime.now())) {
               await scheduleNotification(
-                id: block.id.hashCode,
+                id: notificationId,
                 title: "Напоминание",
                 body: block.goal,
                 scheduledTime: scheduledDate,
               );
-              print("Запланировано: ${block.goal} на $scheduledDate");
+              print("Запланировано: ${block.goal} на $scheduledDate (ID: $notificationId)");
             }
           } catch (e) {
             print("Ошибка при обработке уведомления: $e");
@@ -111,29 +115,40 @@ class NotificationService {
     final now = DateTime.now();
     int targetWeekday = _getWeekdayFromString(day);
 
-    // Определяем ближайшую дату
+    // Начнем с сегодняшней даты
     DateTime scheduledDate = DateTime(now.year, now.month, now.day, hour, minute);
 
-    // Если день уже прошел - переносим на следующую неделю
-    while (scheduledDate.weekday != targetWeekday || scheduledDate.isBefore(now)) {
-      scheduledDate = scheduledDate.add(Duration(days: 1));
+    print("Сегодня: $now (${now.weekday}), Ищем: $day ($targetWeekday)");
+
+    // Если сегодня нужный день и время еще не прошло - оставляем на сегодня
+    if (now.weekday == targetWeekday && scheduledDate.isAfter(now)) {
+      print("Запланировано на СЕГОДНЯ: $scheduledDate");
+      return scheduledDate;
     }
 
+    // Иначе ищем ближайший день вперед
+    do {
+      scheduledDate = scheduledDate.add(Duration(days: 1));
+    } while (scheduledDate.weekday != targetWeekday);
+
+    print("Запланировано на: $scheduledDate");
     return scheduledDate;
   }
 
   // Функция для конвертации строкового названия дня в int (понедельник - 1, воскресенье - 7)
   int _getWeekdayFromString(String day) {
     const Map<String, int> days = {
-      "Monday": DateTime.monday,
-      "Tuesday": DateTime.tuesday,
-      "Wednesday": DateTime.wednesday,
-      "Thursday": DateTime.thursday,
-      "Friday": DateTime.friday,
-      "Saturday": DateTime.saturday,
-      "Sunday": DateTime.sunday,
+      "Пн": DateTime.monday,
+      "Вт": DateTime.tuesday,
+      "Ср": DateTime.wednesday,
+      "Чт": DateTime.thursday,
+      "Пт": DateTime.friday,
+      "Сб": DateTime.saturday,
+      "Вс": DateTime.sunday,
     };
-    return days[day] ?? DateTime.monday; // Если ошибка, ставим понедельник
+    int result = days[day] ?? DateTime.monday; // Если ошибка, ставим понедельник
+    print("Преобразование дня: $day -> $result");
+    return result;
   }
 
   Future<void> cancelNotification(int id) async {
