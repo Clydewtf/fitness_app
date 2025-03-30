@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../services/notification_service.dart';
 import '../../widgets/subscription/add_subscription_screen.dart';
+import '../../widgets/notifications/notifications_settings_dialog.dart';
 
 class SubscriptionScreen extends StatefulWidget {
   const SubscriptionScreen({super.key});
@@ -53,6 +55,43 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   }
 
   void _markAsPaid() async {
+    if (lastPaymentDate == null) return;
+
+    int daysSinceLastPayment = DateTime.now().difference(lastPaymentDate!).inDays;
+
+    // Если прошло меньше 25 дней, показать подтверждение
+    if (daysSinceLastPayment < 25) {
+      _showConfirmPaymentDialog(daysSinceLastPayment);
+      return;
+    }
+
+    _processPayment();
+  }
+
+  void _showConfirmPaymentDialog(int daysSinceLastPayment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Абонемент еще действует"),
+        content: Text("Прошло всего $daysSinceLastPayment дней с последней оплаты. Вы уверены, что хотите отметить оплату?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // Отмена
+            child: Text("Отмена"),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context); // Закрыть диалог
+              _processPayment(); // Все равно оплатить
+            },
+            child: Text("Все равно отметить"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _processPayment() async {
     DateTime now = DateTime.now();
 
     setState(() {
@@ -60,12 +99,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       daysUntilNextPayment = _calculateDaysUntilNextPayment(now);
     });
 
-    // Добавляем в историю оплат
     _addToPaymentHistory(now);
 
-    // Сохраняем обновления в SharedPreferences
     SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('lastPaymentDate', now.toIso8601String());
+    await prefs.setString('last_payment_date', now.toIso8601String());
   }
 
   int _calculateDaysUntilNextPayment(DateTime lastPayment) {
@@ -123,11 +160,10 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
       subscriptionType = null;
       lastPaymentDate = null;
       daysUntilNextPayment = null;
+      paymentHistory = [];
     });
   }
-  // TODO: Сделать так, чтобы если абонемент оплачен недавно, при нажатии на кнопку оплачено появлялсоь что-то типа
-  // "ваш абонемент еще действует", и в историю не добавлялось (подумать над логикой)
-  // ну и уведомления доделать на абонемент отдельно (тоже над логикой подумать)
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -222,9 +258,86 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
                 ),
               ],
             ),
+            SizedBox(height: 16),
+            _buildNotificationBlock(), // Добавляем блок уведомлений
           ],
         ),
       ),
     );
+  }
+
+  bool _notificationsEnabled = false; // Переключатель
+
+  Widget _buildNotificationBlock() {
+    return GestureDetector(
+      onTap: _showNotificationSettings, // Открываем окно настроек
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text("Уведомления о платеже", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Switch(
+            value: _notificationsEnabled,
+            onChanged: (bool value) {
+              setState(() {
+                _notificationsEnabled = value;
+                if (value) {
+                  _showNotificationSettings(); // Если включается — открываем окно
+                } else {
+                  _disableNotifications(); // Если выключается — удаляем уведомления
+                }
+              });
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showNotificationSettings() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    
+    List<int> savedDays = prefs.getStringList('notification_days')?.map(int.parse).toList() ?? [];
+    String? savedTimeStr = prefs.getString('notification_time');
+    TimeOfDay savedTime = savedTimeStr != null
+        ? TimeOfDay(
+            hour: int.parse(savedTimeStr.split(":")[0]),
+            minute: int.parse(savedTimeStr.split(":")[1]),
+          )
+        : TimeOfDay(hour: 9, minute: 0);
+
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return NotificationSettingsDialog(
+          selectedDays: savedDays,
+          selectedTime: savedTime,
+          onSave: (selectedDays, selectedTime) {
+            _saveNotificationPreferences(true); // Включаем уведомления
+            _scheduleNotifications(selectedDays, selectedTime); // Создаём уведомления
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _loadNotificationPreferences() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
+    });
+  }
+
+  void _saveNotificationPreferences(bool isEnabled) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('notifications_enabled', isEnabled);
+  }
+  // TODO: добавить реальную логику уведомлений сюда, скорее всего как-то через уже существующий notification_service
+  void _disableNotifications() {
+    _saveNotificationPreferences(false);
+    // Здесь можно добавить код для отмены уведомлений
+  }
+
+  void _scheduleNotifications(List<int> daysBefore, TimeOfDay time) {
+    // Тут логика планирования уведомлений через `flutter_local_notifications`
   }
 }
