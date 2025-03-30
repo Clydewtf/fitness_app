@@ -6,7 +6,7 @@ import '../../../logic/auth_bloc/auth_bloc.dart';
 import '../../../logic/auth_bloc/auth_event.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
-import '../../../services/notification_service.dart';
+import 'subscriprion_screen.dart';
 import '../auth/login_screen.dart';
 import '../notifications/notification_settings_screen.dart';
 
@@ -99,6 +99,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ElevatedButton(
                   onPressed: _saveProfile,
                   child: const Text("Сохранить изменения"),
+                ),
+
+                const SizedBox(height: 20),
+
+                ListTile(
+                  leading: Icon(Icons.credit_card),
+                  title: Text("Абонемент"),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SubscriptionScreen()),
+                    );
+                  },
                 ),
 
                 const SizedBox(height: 20),
