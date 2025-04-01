@@ -1,6 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:fitness_app/logic/notification_bloc/notification_event.dart';
 import 'package:flutter/material.dart';
+import 'package:timezone/timezone.dart' as tz;
+import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/locator.dart';
 import 'logic/auth_bloc/auth_bloc.dart';
@@ -12,14 +14,20 @@ import 'logic/notification_bloc/notification_bloc.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'services/notification_service.dart';
+import 'services/subscription_notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
+  tz.initializeTimeZones();
 
   final notificationService = NotificationService();
   await notificationService.init();
   await notificationService.reloadScheduledNotifications();
+
+  final subscriptionNotificationService = SubscriptionNotificationService();
+  await subscriptionNotificationService.initialize();
+  await subscriptionNotificationService.reloadScheduledSubscriptionNotifications();
 
   setupLocator(); // Инициализируем DI перед запуском приложения
   runApp(const MyApp());

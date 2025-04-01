@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:timezone/timezone.dart' as tz;
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../../services/notification_service.dart';
+import '../../../services/subscription_notification_service.dart';
 import '../../widgets/subscription/add_subscription_screen.dart';
 import '../../widgets/notifications/notifications_settings_dialog.dart';
 
@@ -17,11 +18,17 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
   DateTime? lastPaymentDate; // Дата последней оплаты
   int? daysUntilNextPayment; // Осталось дней до оплаты
   List<DateTime> paymentHistory = []; // История оплат
+  bool _notificationsEnabled = false; // Переключатель
+  List<int> _notificationDays = []; // Список дней для уведомлений
+  TimeOfDay _notificationTime = TimeOfDay(hour: 9, minute: 0); // Время по умолчанию
+
+  final _subscriptionNotificationService = SubscriptionNotificationService();
 
   @override
   void initState() {
     super.initState();
     _loadSubscriptionData();
+    _loadNotificationPreferences();
   }
 
   Future<void> _loadSubscriptionData() async {
@@ -66,6 +73,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     }
 
     _processPayment();
+    
   }
 
   void _showConfirmPaymentDialog(int daysSinceLastPayment) {
@@ -103,15 +111,30 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
 
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setString('last_payment_date', now.toIso8601String());
+
+    await _rescheduleSubscriptionNotifications(now);
+    // Сохраняем тип подписки (например, monthly или yearly)
+    await prefs.setString('subscription_type', subscriptionType ?? 'Месяц');
   }
 
   int _calculateDaysUntilNextPayment(DateTime lastPayment) {
-    if (subscriptionType == "Месяц") {
-      return lastPayment.add(Duration(days: 30)).difference(DateTime.now()).inDays;
-    } else if (subscriptionType == "Год") {
-      return lastPayment.add(Duration(days: 365)).difference(DateTime.now()).inDays;
+    int period = (subscriptionType == "Месяц") ? 30 : 365;
+    DateTime nextPayment = lastPayment.add(Duration(days: period));
+
+    // 🛠 Если подписка уже истекла, увеличиваем до будущей даты
+    while (nextPayment.isBefore(DateTime.now())) {
+      nextPayment = nextPayment.add(Duration(days: period));
     }
-    return 0; // Если тип не определен
+
+    int remainingDays = nextPayment.difference(DateTime.now()).inDays;
+
+    // 🛠 Если получилось 0 дней — значит, оплата сегодня
+    if (remainingDays == 0) {
+      print('📆 Сегодня день оплаты, уведомления не нужны.');
+      return 0; 
+    }
+
+    return remainingDays;
   }
 
   void _addToPaymentHistory(DateTime paymentDate) async {
@@ -155,13 +178,18 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     await prefs.remove('subscription_type');
     await prefs.remove('last_payment_date');
     await prefs.remove('paymentHistory');
+    await prefs.remove('notifications_enabled');
 
     setState(() {
       subscriptionType = null;
       lastPaymentDate = null;
       daysUntilNextPayment = null;
       paymentHistory = [];
+      _notificationsEnabled = false;
     });
+
+    print('⚠️ Подписка удалена, отключаем уведомления...');
+    _disableNotifications();
   }
 
   @override
@@ -266,8 +294,6 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     );
   }
 
-  bool _notificationsEnabled = false; // Переключатель
-
   Widget _buildNotificationBlock() {
     return GestureDetector(
       onTap: _showNotificationSettings, // Открываем окно настроек
@@ -312,7 +338,7 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
           selectedDays: savedDays,
           selectedTime: savedTime,
           onSave: (selectedDays, selectedTime) {
-            _saveNotificationPreferences(true); // Включаем уведомления
+            _saveNotificationPreferences(true, selectedDays, selectedTime); // Включаем уведомления
             _scheduleNotifications(selectedDays, selectedTime); // Создаём уведомления
           },
         );
@@ -324,20 +350,171 @@ class _SubscriptionScreenState extends State<SubscriptionScreen> {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     setState(() {
       _notificationsEnabled = prefs.getBool('notifications_enabled') ?? false;
+
+      List<String>? daysString = prefs.getStringList('notification_days');
+      _notificationDays = daysString?.map((d) => int.parse(d)).toList() ?? [];
+
+      String? timeString = prefs.getString('notification_time');
+      if (timeString != null) {
+        List<String> parts = timeString.split(':');
+        _notificationTime = TimeOfDay(
+          hour: int.parse(parts[0]),
+          minute: int.parse(parts[1]),
+        );
+      } else {
+        _notificationTime = TimeOfDay(hour: 9, minute: 0); // Значение по умолчанию
+      }
     });
+
+    print('Загружены настройки уведомлений:');
+    print('  Включены: $_notificationsEnabled');
+    print('  Дни: $_notificationDays');
+    print('  Время: ${_notificationTime.format(context)}');
   }
 
-  void _saveNotificationPreferences(bool isEnabled) async {
+  Future<void> _saveNotificationPreferences(bool isEnabled, List<int> days, TimeOfDay time) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool('notifications_enabled', isEnabled);
+    await prefs.setStringList('notification_days', days.map((d) => d.toString()).toList());
+    await prefs.setString('notification_time', '${time.hour}:${time.minute.toString().padLeft(2, '0')}');
+
+    print('Сохранены настройки уведомлений:');
+    print('  Включены: $isEnabled');
+    print('  Дни: $days');
+    print('  Время: ${time.hour}:${time.minute}');
   }
-  // TODO: добавить реальную логику уведомлений сюда, скорее всего как-то через уже существующий notification_service
-  void _disableNotifications() {
-    _saveNotificationPreferences(false);
+  
+  Future<void> _disableNotifications() async {
+    await _saveNotificationPreferences(false, [], const TimeOfDay(hour: 9, minute: 0));
     // Здесь можно добавить код для отмены уведомлений
+    await _subscriptionNotificationService.cancelSubscriptionNotifications();
+    print('❌ Уведомления отключены и удалены!');
   }
 
-  void _scheduleNotifications(List<int> daysBefore, TimeOfDay time) {
-    // Тут логика планирования уведомлений через `flutter_local_notifications`
+  // Future<void> _scheduleNotifications(List<int> daysBefore, TimeOfDay time) async {
+  //   print('📅 Планирование уведомлений...');
+  //   print('  Дни: $daysBefore');
+  //   print('  Время: ${time.hour}:${time.minute}');
+  //   // Тут логика планирования уведомлений через `flutter_local_notifications`
+  //   if (lastPaymentDate != null && daysUntilNextPayment != null) {
+  //     DateTime nextPaymentDate = lastPaymentDate!.add(Duration(days: daysUntilNextPayment!));
+
+  //     // 🛠 Если дата уже прошла, добавляем нужный период (месяц или год)
+  //     // while (nextPaymentDate.isBefore(DateTime.now())) {
+  //     //   nextPaymentDate = nextPaymentDate.add(Duration(days: daysUntilNextPayment!));
+  //     // }
+  //     print('  📆 Следующая оплата: $nextPaymentDate');
+
+  //     // Проверяем, есть ли даты в будущем
+  //     List<int> validDaysBefore = daysBefore.where((days) {
+  //       DateTime notificationDate = nextPaymentDate.subtract(Duration(days: days));
+  //       bool isFutureDate = notificationDate.isAfter(DateTime.now());
+  //       if (!isFutureDate) {
+  //         print('⚠️ Пропущено уведомление, так как дата уже прошла: $notificationDate');
+  //         _saveNotificationPreferences(false, [], const TimeOfDay(hour: 9, minute: 0));
+  //       }
+  //       return isFutureDate;
+  //     }).toList();
+
+  //     if (validDaysBefore.isEmpty) {
+  //       print('❌ Нет уведомлений для планирования, все даты уже прошли.');
+  //       return;
+  //     }
+
+  //     await _subscriptionNotificationService.scheduleSubscriptionNotifications(
+  //       endDate: nextPaymentDate,
+  //       daysBefore: daysBefore,
+  //       time: time,
+  //     );
+  //     print('✅ Уведомления успешно запланированы!');
+  //   } else {
+  //     print('⚠️ Дата подписки не установлена, уведомления не запланированы.');
+  //   }
+  // }
+
+  Future<void> _scheduleNotifications(List<int> daysBefore, TimeOfDay time) async {
+    print('📅 Планирование уведомлений...');
+    print('  Дни: $daysBefore');
+    print('  Время: ${time.hour}:${time.minute}');
+
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    String? lastPaymentString = prefs.getString('last_payment_date');
+    String? subscriptionType = prefs.getString('subscription_type');
+
+    if (lastPaymentString == null || subscriptionType == null) {
+      print('⚠️ Ошибка: Дата подписки или тип подписки отсутствуют в SharedPreferences.');
+      return;
+    }
+
+    DateTime lastPaymentDate = DateTime.parse(lastPaymentString);
+    int subscriptionDuration = (subscriptionType == 'Год') ? 365 : 30;
+    DateTime nextPaymentDate = lastPaymentDate.add(Duration(days: subscriptionDuration));
+
+    // 🛠 Если дата подписки устарела, сдвигаем её на следующий период
+    while (nextPaymentDate.isBefore(DateTime.now())) {
+      nextPaymentDate = nextPaymentDate.add(Duration(days: subscriptionDuration));
+    }
+
+    print('  📆 Следующая оплата: $nextPaymentDate');
+
+    DateTime now = DateTime.now(); // Текущее время
+
+    // Проверяем, есть ли даты в будущем
+    List<int> validDaysBefore = daysBefore.where((days) {
+      DateTime notificationDate = nextPaymentDate.subtract(Duration(days: days));
+      // Добавляем время уведомления
+      notificationDate = DateTime(notificationDate.year, notificationDate.month,
+        notificationDate.day, time.hour, time.minute);
+
+      bool isFutureDate = notificationDate.isAfter(DateTime.now());
+      if (!isFutureDate) {
+        print('⚠️ Пропущено уведомление, так как дата уже прошла: $notificationDate');
+      }
+      return isFutureDate;
+    }).toList();
+
+    if (validDaysBefore.isEmpty) {
+      print('❌ Нет уведомлений для планирования, все даты уже прошли.');
+      return;
+    }
+
+    await _subscriptionNotificationService.scheduleSubscriptionNotifications(
+      endDate: nextPaymentDate,
+      daysBefore: validDaysBefore, // Передаём только даты в будущем
+      time: time,
+    );
+
+    print('✅ Уведомления успешно запланированы!');
+  }
+
+  Future<void> _rescheduleSubscriptionNotifications(DateTime newPaymentDate) async {
+    print('🔄 Перепланируем уведомления...');
+    
+    await SubscriptionNotificationService.instance.cancelSubscriptionNotifications(); // Удаляем старые уведомления
+
+    if (_notificationsEnabled && daysUntilNextPayment != null) {
+      DateTime nextPaymentDate = newPaymentDate.add(Duration(days: daysUntilNextPayment!));
+      print('  📆 Новая дата окончания подписки: $nextPaymentDate');
+
+      // ✅ Загружаем сохранённые настройки уведомлений
+      final prefs = await SharedPreferences.getInstance();
+      _notificationDays = prefs.getStringList('notification_days')?.map(int.parse).toList() ?? _notificationDays;
+      int hour = prefs.getInt('notification_hour') ?? _notificationTime.hour;
+      int minute = prefs.getInt('notification_minute') ?? _notificationTime.minute;
+      _notificationTime = TimeOfDay(hour: hour, minute: minute);
+
+      if (_notificationDays.isNotEmpty) {
+        await SubscriptionNotificationService.instance.scheduleSubscriptionNotifications(
+          endDate: nextPaymentDate, // Новый конец подписки
+          daysBefore: _notificationDays, 
+          time: _notificationTime,
+        );
+        print('✅ Уведомления перепланированы.');
+      } else {
+        print('⚠️ Дни перед окончанием пустые, уведомления не запланированы.');
+      }
+    } else {
+      print('⚠️ Уведомления отключены или нет данных о подписке, перепланирование невозможно.');
+    }
   }
 }
