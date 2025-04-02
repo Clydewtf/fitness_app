@@ -8,6 +8,7 @@ import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
 import 'subscriprion_screen.dart';
 import '../auth/login_screen.dart';
+import 'settings_screen.dart';
 import '../notifications/notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -93,6 +94,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     });
                   },
                 ),
+
                 const SizedBox(height: 20),
 
                 // Кнопка сохранения
@@ -127,6 +129,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 20),
+
+                ListTile(
+                  leading: Icon(Icons.settings),
+                  title: Text('Настройки'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => SettingsScreen()),
                     );
                   },
                 ),

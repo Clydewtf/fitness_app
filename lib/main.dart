@@ -1,10 +1,12 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:fitness_app/core/theme/theme.dart';
 import 'package:fitness_app/logic/notification_bloc/notification_event.dart';
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/locator.dart';
+import 'core/theme/theme_cubit.dart';
 import 'logic/auth_bloc/auth_bloc.dart';
 import 'logic/auth_bloc/auth_event.dart';
 import 'logic/auth_bloc/auth_state.dart';
@@ -42,11 +44,17 @@ class MyApp extends StatelessWidget {
       providers: [
         BlocProvider(create: (context) => locator<AuthBloc>()..add(CheckLoginStatus())),
         BlocProvider<NotificationBloc>(create: (context) => NotificationBloc(notificationService: locator<NotificationService>())..add(LoadNotificationsEvent()),),
+        BlocProvider(create: (context) => ThemeCubit()..loadTheme()),
       ],
-      child: MaterialApp(
-        title: 'Фитнес-приложение',
-        theme: ThemeData(primarySwatch: Colors.blue),
-        home: const AuthWrapper(), // Определяем, какой экран загрузить
+      child: BlocBuilder<ThemeCubit, ThemeState>(
+        builder: (context, state) {
+          bool isDarkMode = state is ThemeUpdated && state.isDarkMode;
+          return MaterialApp(
+            title: 'Фитнес-приложение',
+            theme: isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme, 
+            home: const AuthWrapper(),
+          );
+        },
       ),
     );
   }

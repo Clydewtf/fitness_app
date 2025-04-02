@@ -34,6 +34,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    Color bgColor = Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white;
+
     return Scaffold(
       appBar: AppBar(),
       body: Stack(
@@ -45,7 +47,7 @@ class _HomeScreenState extends State<HomeScreen> {
             alignment: Alignment.bottomCenter,
             child: Container(
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: bgColor,
                 borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
@@ -74,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // Кнопка "Плюс" по центру
           Positioned(
-            bottom: 10, // Чуть выше, чтобы не перекрывать навигацию
+            bottom: 15, // Чуть выше, чтобы не перекрывать навигацию
             left: MediaQuery.of(context).size.width / 2 - 30,
             child: FloatingActionButton(
               onPressed: () {
