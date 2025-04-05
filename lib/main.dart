@@ -1,6 +1,7 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:fitness_app/core/theme/theme.dart';
 import 'package:fitness_app/logic/notification_bloc/notification_event.dart';
+import 'package:fitness_app/logic/workout_bloc/exercise_event.dart';
 import 'package:flutter/material.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
@@ -11,6 +12,7 @@ import 'logic/auth_bloc/auth_bloc.dart';
 import 'logic/auth_bloc/auth_event.dart';
 import 'logic/auth_bloc/auth_state.dart';
 import 'logic/workout_bloc/workout_bloc.dart';
+import 'logic/workout_bloc/exercise_bloc.dart';
 import 'logic/nutrition_bloc/nutrition_bloc.dart';
 import 'logic/notification_bloc/notification_bloc.dart';
 import 'presentation/screens/auth/login_screen.dart';
@@ -45,6 +47,7 @@ class MyApp extends StatelessWidget {
         BlocProvider(create: (context) => locator<AuthBloc>()..add(CheckLoginStatus())),
         BlocProvider<NotificationBloc>(create: (context) => NotificationBloc(notificationService: locator<NotificationService>())..add(LoadNotificationsEvent()),),
         BlocProvider(create: (context) => ThemeCubit()..loadTheme()),
+        BlocProvider(create: (context) => locator<ExerciseBloc>()..add(LoadExercises()),),
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
         builder: (context, state) {

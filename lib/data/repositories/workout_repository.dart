@@ -1,28 +1,40 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import '../models/workout_model.dart';
+import '../models/exercise_model.dart';
 import 'dart:convert';
 
 class WorkoutRepository {
-  static const String _workoutsKey = "workouts_data";
+  // Пока что заглушка — потом заменим на загрузку из Firebase или локального хранилища
+  Future<List<Exercise>> getAllExercises() async {
+    await Future.delayed(const Duration(milliseconds: 500)); // эмуляция загрузки
 
-  Future<void> saveWorkouts(List<WorkoutModel> workouts) async {
-    final prefs = await SharedPreferences.getInstance();
-    final workoutsJson = jsonEncode(workouts.map((w) => w.toJson()).toList());
-    await prefs.setString(_workoutsKey, workoutsJson);
-  }
-
-  Future<List<WorkoutModel>> loadWorkouts() async {
-    final prefs = await SharedPreferences.getInstance();
-    final workoutsJson = prefs.getString(_workoutsKey);
-    
-    if (workoutsJson == null) return [];
-
-    List<dynamic> decoded = jsonDecode(workoutsJson);
-    return decoded.map((w) => WorkoutModel.fromJson(w)).toList();
-  }
-
-  Future<void> clearWorkouts() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_workoutsKey);
+    return [
+      Exercise(
+        id: '1',
+        name: 'Жим лежа',
+        muscleGroup: 'Грудь',
+        type: 'Силовая',
+        equipment: 'Штанга',
+        description: 'Классическое упражнение на грудные мышцы.',
+        imageUrl: null,
+      ),
+      Exercise(
+        id: '2',
+        name: 'Приседания',
+        muscleGroup: 'Ноги',
+        type: 'Силовая',
+        equipment: 'Вес тела',
+        description: 'Базовое упражнение на ноги и ягодицы.',
+        imageUrl: null,
+      ),
+      Exercise(
+        id: '3',
+        name: 'Планка',
+        muscleGroup: 'Пресс',
+        type: 'Статическая',
+        equipment: 'Без оборудования',
+        description: 'Удержание тела в горизонтальном положении.',
+        imageUrl: null,
+      ),
+    ];
   }
 }
