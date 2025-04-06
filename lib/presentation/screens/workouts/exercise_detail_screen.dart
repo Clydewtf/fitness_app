@@ -9,7 +9,7 @@ class ExerciseDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasMedia = exercise.imageUrl != null && exercise.imageUrl!.isNotEmpty;
+    final hasImages = exercise.imageUrls != null && exercise.imageUrls!.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -20,32 +20,53 @@ class ExerciseDetailScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔹 Если есть media — показываем, иначе заглушка
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: hasMedia
-                  ? CachedNetworkImage(
-                      imageUrl: exercise.imageUrl!,
-                      width: double.infinity,
-                      height: 200,
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => const Center(child: CircularProgressIndicator()),
-                      errorWidget: (context, url, error) => _placeholder(),
-                    )
-                  : _placeholder(),
-            ),
+            // 🔹 Галерея изображений
+            if (hasImages)
+              SizedBox(
+                height: 200,
+                child: PageView.builder(
+                  itemCount: exercise.imageUrls!.length,
+                  itemBuilder: (context, index) {
+                    final url = exercise.imageUrls![index];
+                    return ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: CachedNetworkImage(
+                        imageUrl: url,
+                        width: double.infinity,
+                        height: 200,
+                        fit: BoxFit.cover,
+                        placeholder: (context, _) => const Center(child: CircularProgressIndicator()),
+                        errorWidget: (context, _, __) => _placeholder(),
+                      ),
+                    );
+                  },
+                ),
+              )
+            else
+              _placeholder(),
             const SizedBox(height: 24),
 
-            // 🔸 Информация об упражнении
+            // 🔸 Название
             Text(
               exercise.name,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 12),
+
+             // 🔸 Мышцы
             Text(
-              '${exercise.muscleGroup} • ${exercise.type}',
+              _formatMuscles(exercise),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
             ),
+
+            // 🔸 Тип, уровень
+            const SizedBox(height: 8),
+            Text(
+              '${exercise.type} • ${exercise.level}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+            ),
+
+            // 🔸 Оборудование
             if (exercise.equipment.isNotEmpty) ...[
               const SizedBox(height: 8),
               Text(
@@ -53,10 +74,10 @@ class ExerciseDetailScreen extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
               ),
             ],
-            const SizedBox(height: 24),
 
-            // 🔹 Заглушка под будущее описание (если планируешь)
+            // 🔹 Краткое описание
             if (exercise.description != null && exercise.description!.isNotEmpty) ...[
+              const SizedBox(height: 24),
               Text(
                 'Описание',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
@@ -66,6 +87,26 @@ class ExerciseDetailScreen extends StatelessWidget {
                 exercise.description!,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
+            ],
+
+            // 🔹 Подробные инструкции
+            if (exercise.instructions.isNotEmpty) ...[
+              const SizedBox(height: 24),
+              Text(
+                'Инструкции',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              ...exercise.instructions.map((step) => Padding(
+                    padding: const EdgeInsets.only(bottom: 6),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontSize: 16)),
+                        Expanded(child: Text(step, style: Theme.of(context).textTheme.bodyMedium)),
+                      ],
+                    ),
+                  )),
             ],
           ],
         ),
@@ -82,5 +123,12 @@ class ExerciseDetailScreen extends StatelessWidget {
         child: Icon(Icons.play_circle_fill, color: Colors.grey, size: 64),
       ),
     );
+  }
+
+  String _formatMuscles(Exercise e) {
+    final primary = e.primaryMuscles.join(', ');
+    final secondary = e.secondaryMuscles?.join(', ');
+    if (secondary == null || secondary.isEmpty) return primary;
+    return '$primary • $secondary';
   }
 }

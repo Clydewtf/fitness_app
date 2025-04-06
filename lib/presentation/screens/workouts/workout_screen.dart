@@ -115,7 +115,7 @@ class WorkoutsTab extends StatelessWidget {
 class ExercisesTab extends StatefulWidget {
   final String? selectedMuscleGroup;
   final String? selectedType;
-  final String? selectedEquipment;
+  final String? selectedEquipment;  
   final void Function({
     String? muscleGroup,
     String? type,
@@ -179,9 +179,18 @@ class _ExercisesTabState extends State<ExercisesTab> {
           final allExercises = state.allExercises;
           final filtered = state.filteredExercises;
 
-          final muscleGroups = allExercises.map((e) => e.muscleGroup).toSet().toList();
-          final types = allExercises.map((e) => e.type).toSet().toList();
-          final equipment = allExercises.map((e) => e.equipment).toSet().toList();
+          // 🔹 Собираем уникальные мышцы (основные + второстепенные)
+          final muscleGroups = allExercises
+              .expand((e) => [...e.primaryMuscles, ...(e.secondaryMuscles ?? [])])
+              .whereType<String>()
+              .where((m) => m.trim().isNotEmpty)
+              .toSet()
+              .toList()
+            ..sort();
+
+          // 🔹 Уникальные типы и оборудование
+          final types = allExercises.map((e) => e.type).whereType<String>().toSet().toList()..sort();
+          final equipment = allExercises.map((e) => e.equipment).whereType<String>().toSet().toList()..sort();
 
           return Scaffold(
             appBar: AppBar(

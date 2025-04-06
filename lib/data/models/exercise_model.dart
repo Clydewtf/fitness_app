@@ -1,42 +1,55 @@
 class Exercise {
   final String id;
   final String name;
-  final String muscleGroup; // грудь, спина, ноги и т.д.
-  final String type; // силовая, кардио и т.п.
-  final String equipment; // гантели, турник, вес тела и т.п.
-  final String? description;
-  final String? imageUrl;
+  final String level; // новичок, средний, продвинутый
+  final String type; // силовая, кардио, статическая и т.д.
+  final String equipment; // гантели, вес тела и т.п.
+  final String? description; // краткое описание (для карточки)
+  final List<String> instructions; // подробные инструкции (экран описания)
+  final List<String>? imageUrls; // можно будет пролистывать
+  final List<String> primaryMuscles;
+  final List<String>? secondaryMuscles;
 
   Exercise({
     required this.id,
     required this.name,
-    required this.muscleGroup,
+    required this.level,
     required this.type,
     required this.equipment,
     this.description,
-    this.imageUrl,
+    required this.instructions,
+    this.imageUrls,
+    required this.primaryMuscles,
+    this.secondaryMuscles,
   });
 
   factory Exercise.fromMap(Map<String, dynamic> map, String id) {
     return Exercise(
       id: id,
-      name: map['name'] ?? '',
-      muscleGroup: map['muscleGroup'] ?? '',
-      type: map['type'] ?? '',
-      equipment: map['equipment'] ?? '',
+      name: map['name'],
+      level: map['level'],
+      type: map['type'],
+      equipment: map['equipment'],
       description: map['description'],
-      imageUrl: map['imageUrl'],
+      instructions: List<String>.from(map['instructions'] ?? []),
+      imageUrls: map['imageUrls'] != null ? List<String>.from(map['imageUrls']) : null,
+      primaryMuscles: List<String>.from(map['primaryMuscles'] ?? []),
+      secondaryMuscles: map['secondaryMuscles'] != null ? List<String>.from(map['secondaryMuscles']) : null,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'name': name,
-      'muscleGroup': muscleGroup,
+      'level': level,
       'type': type,
       'equipment': equipment,
       'description': description,
-      'imageUrl': imageUrl,
+      'instructions': instructions,
+      'imageUrls': imageUrls,
+      'primaryMuscles': primaryMuscles,
+      'secondaryMuscles': secondaryMuscles,
     };
   }
 }
