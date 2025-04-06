@@ -1,14 +1,12 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../data/models/exercise_model.dart';
 import 'exercise_event.dart';
 import 'exercise_state.dart';
-import '../../data/repositories/workout_repository.dart';
+import '../../data/repositories/exercise_repository.dart';
 
 class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
-  final WorkoutRepository workoutRepository;
-  List<Exercise> _allExercises = [];
+  final ExerciseRepository exerciseRepository;
 
-  ExerciseBloc({required this.workoutRepository}) : super(ExerciseInitial()) {
+  ExerciseBloc({required this.exerciseRepository}) : super(ExerciseInitial()) {
     on<LoadExercises>(_onLoadExercises);
     on<FilterExercises>(_onFilterExercises);
   }
@@ -16,7 +14,7 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
   Future<void> _onLoadExercises(LoadExercises event, Emitter<ExerciseState> emit) async {
     emit(ExerciseLoading());
     try {
-      final exercises = await workoutRepository.getAllExercises();
+      final exercises = await exerciseRepository.fetchExercises();
       emit(ExerciseLoaded(exercises, exercises));
     } catch (e) {
       emit(ExerciseError('Ошибка загрузки упражнений'));

@@ -17,21 +17,20 @@ class Exercise {
     this.imageUrl,
   });
 
-  factory Exercise.fromJson(Map<String, dynamic> json) {
+  factory Exercise.fromMap(Map<String, dynamic> map, String id) {
     return Exercise(
-      id: json['id'],
-      name: json['name'],
-      muscleGroup: json['muscleGroup'],
-      type: json['type'],
-      equipment: json['equipment'],
-      description: json['description'],
-      imageUrl: json['imageUrl'],
+      id: id,
+      name: map['name'] ?? '',
+      muscleGroup: map['muscleGroup'] ?? '',
+      type: map['type'] ?? '',
+      equipment: map['equipment'] ?? '',
+      description: map['description'],
+      imageUrl: map['imageUrl'],
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'name': name,
       'muscleGroup': muscleGroup,
       'type': type,

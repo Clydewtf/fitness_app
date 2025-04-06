@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
+import '../data/repositories/exercise_repository.dart';
 import '../data/repositories/workout_repository.dart';
 import '../data/repositories/nutrition_repository.dart';
 import '../logic/auth_bloc/auth_bloc.dart';
@@ -20,12 +21,13 @@ void setupLocator() {
 
   // Регистрация репозиториев (синглтоны)
   locator.registerLazySingleton<WorkoutRepository>(() => WorkoutRepository());
+  locator.registerLazySingleton<ExerciseRepository>(() => ExerciseRepository());
   locator.registerLazySingleton<NutritionRepository>(() => NutritionRepository());
 
   // Регистрация BLoC (создаются каждый раз при запросе)
   locator.registerFactory(() => AuthBloc(locator<AuthService>()));
   locator.registerFactory(() => WorkoutBloc(locator<WorkoutRepository>()));
-  locator.registerFactory(() => ExerciseBloc(workoutRepository: locator<WorkoutRepository>()));
+  locator.registerFactory(() => ExerciseBloc(exerciseRepository: locator<ExerciseRepository>()));
   locator.registerFactory(() => NutritionBloc(locator<NutritionRepository>()));
   locator.registerFactory(() => NotificationBloc(notificationService: locator<NotificationService>()));
 }
