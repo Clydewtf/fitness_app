@@ -20,8 +20,7 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
       emit(ExerciseError('Ошибка загрузки упражнений'));
     }
   }
-  // TODO: сортировку по уровню (хз как, отдельно или внутри уже нашей сортировки)
-  // чел может искать упражнения на грудь (сортировку) и например хотеть видеть от новичка до про. хз
+
   void _onFilterExercises(FilterExercises event, Emitter<ExerciseState> emit) {
     final currentState = state;
     if (currentState is ExerciseLoaded) { 
@@ -34,11 +33,13 @@ class ExerciseBloc extends Bloc<ExerciseEvent, ExerciseState> {
 
         final matchType = event.type == null || exercise.type == event.type;
         final matchEquipment = event.equipment == null || exercise.equipment == event.equipment;
+        final matchLevel = event.levels == null || event.levels!.isEmpty || event.levels!.contains(exercise.level);
+
         final matchSearch = event.searchQuery == null ||
             event.searchQuery!.isEmpty ||
             exercise.name.toLowerCase().contains(event.searchQuery!.toLowerCase());
 
-        return matchMuscle && matchType && matchEquipment && matchSearch;
+        return matchMuscle && matchType && matchEquipment && matchLevel && matchSearch;
       }).toList();
 
       emit(ExerciseLoaded(all, filtered));

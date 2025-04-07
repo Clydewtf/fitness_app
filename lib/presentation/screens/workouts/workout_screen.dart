@@ -18,16 +18,19 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
   String? selectedMuscleGroup;
   String? selectedType;
   String? selectedEquipment;
+  List<String> selectedLevels = [];
 
   void _onFilterChanged({
     String? muscleGroup,
     String? type,
     String? equipment,
+    List<String>? levels,
   }) {
     setState(() {
       selectedMuscleGroup = muscleGroup == "Все" ? null : muscleGroup;
       selectedType = type == "Все" ? null : type;
       selectedEquipment = equipment == "Все" ? null : equipment;
+      selectedLevels = levels ?? [];
     });
 
     context.read<ExerciseBloc>().add(
@@ -35,6 +38,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
         muscleGroup: selectedMuscleGroup,
         type: selectedType,
         equipment: selectedEquipment,
+        levels: selectedLevels.isEmpty ? null : selectedLevels,
       ),
     );
   }
@@ -50,6 +54,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
           selectedMuscleGroup: selectedMuscleGroup,
           selectedType: selectedType,
           selectedEquipment: selectedEquipment,
+          selectedLevels: selectedLevels, 
           muscleGroups: muscleGroups,
           types: types,
           equipment: equipment,
@@ -89,10 +94,11 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
         children: [
           const WorkoutsTab(),
           ExercisesTab(
-            key: ValueKey('$selectedMuscleGroup|$selectedType|$selectedEquipment'),
+            key: ValueKey('$selectedMuscleGroup|$selectedType|$selectedEquipment|${selectedLevels.join(",")}'),
             selectedMuscleGroup: selectedMuscleGroup,
             selectedType: selectedType,
             selectedEquipment: selectedEquipment,
+            selectedLevels: selectedLevels,
             onFilterChanged: _onFilterChanged,
             onOpenFilter: _openFilterSheet,
           )
@@ -116,10 +122,12 @@ class ExercisesTab extends StatefulWidget {
   final String? selectedMuscleGroup;
   final String? selectedType;
   final String? selectedEquipment;  
+  final List<String> selectedLevels;
   final void Function({
     String? muscleGroup,
     String? type,
     String? equipment,
+    List<String>? levels,
   }) onFilterChanged;
   final void Function(
     BuildContext context,
@@ -133,6 +141,7 @@ class ExercisesTab extends StatefulWidget {
     required this.selectedMuscleGroup,
     required this.selectedType,
     required this.selectedEquipment,
+    required this.selectedLevels,
     required this.onFilterChanged,
     required this.onOpenFilter,
   });
@@ -150,6 +159,7 @@ class _ExercisesTabState extends State<ExercisesTab> {
         muscleGroup: widget.selectedMuscleGroup,
         type: widget.selectedType,
         equipment: widget.selectedEquipment,
+        levels: widget.selectedLevels.isEmpty ? null : widget.selectedLevels,
         searchQuery: query,
       ),
     );
@@ -166,6 +176,7 @@ class _ExercisesTabState extends State<ExercisesTab> {
     if (widget.selectedMuscleGroup != null) count++;
     if (widget.selectedType != null) count++;
     if (widget.selectedEquipment != null) count++;
+    if (widget.selectedLevels.isNotEmpty && widget.selectedLevels.length != 3) count++;
     return count;
   }
 

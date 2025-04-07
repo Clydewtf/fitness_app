@@ -11,10 +11,11 @@ class FilterExercises extends ExerciseEvent {
   final String? muscleGroup;
   final String? type;
   final String? equipment;
+  final List<String>? levels;
   final String? searchQuery;
 
-  FilterExercises({this.muscleGroup, this.type, this.equipment, this.searchQuery});
+  FilterExercises({this.muscleGroup, this.type, this.equipment, this.levels, this.searchQuery});
 
   @override
-  List<Object?> get props => [muscleGroup, type, equipment, searchQuery];
+  List<Object?> get props => [muscleGroup, type, equipment, levels, searchQuery];
 }

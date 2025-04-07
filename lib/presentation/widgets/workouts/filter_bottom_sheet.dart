@@ -4,6 +4,7 @@ class FilterBottomSheet extends StatefulWidget {
   final String? selectedMuscleGroup;
   final String? selectedType;
   final String? selectedEquipment;
+  final List<String> selectedLevels;
   final List<String> muscleGroups;
   final List<String> types;
   final List<String> equipment;
@@ -11,6 +12,7 @@ class FilterBottomSheet extends StatefulWidget {
     String? muscleGroup,
     String? type,
     String? equipment,
+    List<String>? levels,
   }) onApply;
 
   const FilterBottomSheet({
@@ -18,6 +20,7 @@ class FilterBottomSheet extends StatefulWidget {
     required this.selectedMuscleGroup,
     required this.selectedType,
     required this.selectedEquipment,
+    required this.selectedLevels,
     required this.muscleGroups,
     required this.types,
     required this.equipment,
@@ -32,6 +35,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
   String? _selectedMuscleGroup;
   String? _selectedType;
   String? _selectedEquipment;
+  List<String> _selectedLevels = [];
+  final _allLevels = ["Новичок", "Средний", "Продвинутый"];
+
 
   @override
   void initState() {
@@ -39,6 +45,9 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     _selectedMuscleGroup = widget.selectedMuscleGroup ?? "Все";
     _selectedType = widget.selectedType ?? "Все";
     _selectedEquipment = widget.selectedEquipment ?? "Все";
+    _selectedLevels = widget.selectedLevels.isEmpty
+    ? List.from(_allLevels)
+    : List.from(widget.selectedLevels);
   }
 
   @override
@@ -75,6 +84,33 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             onChanged: (value) => setState(() => _selectedEquipment = value),
           ),
 
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text("Уровень", style: TextStyle(fontSize: 16)),
+            ),
+          ),
+          Wrap(
+            spacing: 8,
+            children: _allLevels.map((level) {
+              final isSelected = _selectedLevels.contains(level);
+              return FilterChip(
+                label: Text(level),
+                selected: isSelected,
+                onSelected: (selected) {
+                  setState(() {
+                    if (selected) {
+                      _selectedLevels.add(level);
+                    } else {
+                      _selectedLevels.remove(level);
+                    }
+                  });
+                },
+              );
+            }).toList(),
+          ),
+
           const SizedBox(height: 16),
 
           Row(
@@ -82,10 +118,12 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
             children: [
               TextButton(
                 onPressed: () {
+                  _selectedLevels.clear();
                   widget.onApply(
                     muscleGroup: null,
                     type: null,
                     equipment: null,
+                    levels: null,
                   );
                   Navigator.pop(context);
                 },
@@ -94,9 +132,10 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
               ElevatedButton(
                 onPressed: () {
                   widget.onApply(
-                    muscleGroup: _selectedMuscleGroup,
-                    type: _selectedType,
-                    equipment: _selectedEquipment,
+                    muscleGroup: _selectedMuscleGroup == "Все" ? null : _selectedMuscleGroup,
+                    type: _selectedType == "Все" ? null : _selectedType,  
+                    equipment: _selectedEquipment == "Все" ? null : _selectedEquipment,
+                    levels: _selectedLevels.length == _allLevels.length ? null : _selectedLevels,
                   );
                   Navigator.pop(context);
                 },
