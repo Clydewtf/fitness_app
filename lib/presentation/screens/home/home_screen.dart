@@ -1,4 +1,10 @@
 import 'package:flutter/material.dart';
+import '../../../core/locator.dart';
+import '../../../data/repositories/workout_repository.dart';
+import '../../../logic/auth_bloc/auth_state.dart';
+import '../../../logic/workout_bloc/workout_bloc.dart';
+import '../../../logic/workout_bloc/workout_event.dart';
+import '../../../services/user_service.dart';
 import '../workouts/workout_screen.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../progress/progress_screen.dart';
@@ -34,61 +40,74 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    Color bgColor = Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white;
+    final authState = context.watch<AuthBloc>().state;
 
-    return Scaffold(
-      appBar: AppBar(),
-      body: Stack(
-        children: [
-          _screens[_selectedIndex], // Показываем активный экран
+    if (authState is! Authenticated) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
 
-          // Нижняя панель с навигацией
-          Align(
-            alignment: Alignment.bottomCenter,
-            child: Container(
-              decoration: BoxDecoration(
-                color: bgColor,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(20),
-                  topRight: Radius.circular(20),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.15),
-                    blurRadius: 10,
-                    spreadRadius: 2,
+    return BlocProvider<WorkoutBloc>(
+      create: (_) => WorkoutBloc(
+        workoutRepository: locator.get<WorkoutRepository>(),
+        userService: locator.get<UserService>(),
+        uid: authState.user.uid,
+      )..add(LoadWorkouts()),
+      child: Scaffold(
+        appBar: AppBar(),
+        body: Stack(
+          children: [
+            _screens[_selectedIndex],
+
+            // Нижняя панель
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(20),
+                    topRight: Radius.circular(20),
                   ),
-                ],
-              ),
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: [
-                  _buildNavItem(Icons.fitness_center, "Тренировки", 0),
-                  _buildNavItem(Icons.fastfood, "Питание", 1),
-                  const SizedBox(width: 70), // Оставляем место под "плюс"
-                  _buildNavItem(Icons.bar_chart, "Прогресс", 2),
-                  _buildNavItem(Icons.person, "Профиль", 3),
-                ],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withAlpha(38),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    ),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(Icons.fitness_center, "Тренировки", 0),
+                    _buildNavItem(Icons.fastfood, "Питание", 1),
+                    const SizedBox(width: 70),
+                    _buildNavItem(Icons.bar_chart, "Прогресс", 2),
+                    _buildNavItem(Icons.person, "Профиль", 3),
+                  ],
+                ),
               ),
             ),
-          ),
 
-          // Кнопка "Плюс" по центру
-          Positioned(
-            bottom: 15, // Чуть выше, чтобы не перекрывать навигацию
-            left: MediaQuery.of(context).size.width / 2 - 30,
-            child: FloatingActionButton(
-              onPressed: () {
-                // TODO: Открыть экран быстрого добавления
-              },
-              shape: const CircleBorder(),
-              backgroundColor: Colors.blue,
-              elevation: 8,
-              child: const Icon(Icons.add, size: 35, color: Colors.white),
+            // Кнопка "плюс"
+            Positioned(
+              bottom: 15,
+              left: MediaQuery.of(context).size.width / 2 - 30,
+              child: FloatingActionButton(
+                onPressed: () {
+                  // TODO: открытие быстрого добавления
+                },
+                shape: const CircleBorder(),
+                backgroundColor: Colors.blue,
+                elevation: 8,
+                child: const Icon(Icons.add, size: 35, color: Colors.white),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

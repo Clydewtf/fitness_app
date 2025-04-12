@@ -26,7 +26,7 @@ void setupLocator() {
 
   // Регистрация BLoC (создаются каждый раз при запросе)
   locator.registerFactory(() => AuthBloc(locator<AuthService>()));
-  locator.registerFactory(() => WorkoutBloc(locator<WorkoutRepository>()));
+  // locator.registerFactory(() => WorkoutBloc(workoutRepository: locator<WorkoutRepository>()));
   locator.registerFactory(() => ExerciseBloc(exerciseRepository: locator<ExerciseRepository>()));
   locator.registerFactory(() => NutritionBloc(locator<NutritionRepository>()));
   locator.registerFactory(() => NotificationBloc(notificationService: locator<NotificationService>()));

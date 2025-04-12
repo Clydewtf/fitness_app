@@ -6,7 +6,7 @@ class Exercise {
   final String equipment; // гантели, вес тела и т.п.
   final String? description; // краткое описание (для карточки)
   final List<String> instructions; // подробные инструкции (экран описания)
-  final List<String>? imageUrls; // можно будет пролистывать
+  final List<String>? imageUrls;
   final List<String> primaryMuscles;
   final List<String>? secondaryMuscles;
 

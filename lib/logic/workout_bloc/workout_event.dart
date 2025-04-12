@@ -1,30 +1,23 @@
 import 'package:equatable/equatable.dart';
-import '../../data/models/workout_model.dart';
 
 abstract class WorkoutEvent extends Equatable {
+  const WorkoutEvent();
+
   @override
   List<Object?> get props => [];
 }
 
-// Загрузка списка тренировок
 class LoadWorkouts extends WorkoutEvent {}
 
-// Добавление новой тренировки
-class AddWorkout extends WorkoutEvent {
-  final WorkoutModel workout;
-
-  AddWorkout(this.workout);
-
-  @override
-  List<Object?> get props => [workout];
-}
-
-// Удаление тренировки
-class DeleteWorkout extends WorkoutEvent {
+class ToggleFavoriteWorkout extends WorkoutEvent {
   final String workoutId;
+  final bool isFavorite;
 
-  DeleteWorkout(this.workoutId);
+  const ToggleFavoriteWorkout({
+    required this.workoutId,
+    required this.isFavorite,
+  });
 
   @override
-  List<Object?> get props => [workoutId];
+  List<Object?> get props => [workoutId, isFavorite];
 }

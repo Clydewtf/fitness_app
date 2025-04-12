@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:fitness_app/core/theme/theme.dart';
 import 'package:fitness_app/logic/notification_bloc/notification_event.dart';
@@ -8,6 +9,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'core/locator.dart';
 import 'core/theme/theme_cubit.dart';
+import 'data/repositories/workout_repository.dart';
 import 'logic/auth_bloc/auth_bloc.dart';
 import 'logic/auth_bloc/auth_event.dart';
 import 'logic/auth_bloc/auth_state.dart';
@@ -15,10 +17,12 @@ import 'logic/workout_bloc/workout_bloc.dart';
 import 'logic/workout_bloc/exercise_bloc.dart';
 import 'logic/nutrition_bloc/nutrition_bloc.dart';
 import 'logic/notification_bloc/notification_bloc.dart';
+import 'logic/workout_bloc/workout_event.dart';
 import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'services/notification_service.dart';
 import 'services/subscription_notification_service.dart';
+import 'services/user_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -48,13 +52,14 @@ class MyApp extends StatelessWidget {
         BlocProvider<NotificationBloc>(create: (context) => NotificationBloc(notificationService: locator<NotificationService>())..add(LoadNotificationsEvent()),),
         BlocProvider(create: (context) => ThemeCubit()..loadTheme()),
         BlocProvider(create: (context) => locator<ExerciseBloc>()..add(LoadExercises()),),
+        // BlocProvider<WorkoutBloc>(create: (context) => WorkoutBloc(workoutRepository: locator.get())..add(LoadWorkouts()),),
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
         builder: (context, state) {
           bool isDarkMode = state is ThemeUpdated && state.isDarkMode;
           return MaterialApp(
             title: 'Фитнес-приложение',
-            theme: isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme, 
+            theme: isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme,
             home: const AuthWrapper(),
           );
         },

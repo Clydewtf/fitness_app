@@ -44,4 +44,28 @@ class UserService {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     return prefs.getString('profile_image');
   }
+
+  // Получить список избранных тренировок
+  Future<List<String>> getFavoriteWorkouts(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    final data = doc.data();
+    if (data != null && data['favoriteWorkouts'] != null) {
+      return List<String>.from(data['favoriteWorkouts']);
+    }
+    return [];
+  }
+
+  // Добавить тренировку в избранное
+  Future<void> addFavoriteWorkout(String uid, String workoutId) async {
+    await _firestore.collection('users').doc(uid).update({
+      'favoriteWorkouts': FieldValue.arrayUnion([workoutId])
+    });
+  }
+
+  // Удалить тренировку из избранного
+  Future<void> removeFavoriteWorkout(String uid, String workoutId) async {
+    await _firestore.collection('users').doc(uid).update({
+      'favoriteWorkouts': FieldValue.arrayRemove([workoutId])
+    });
+  }
 }

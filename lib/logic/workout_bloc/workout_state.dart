@@ -6,20 +6,20 @@ abstract class WorkoutState extends Equatable {
   List<Object?> get props => [];
 }
 
-// Начальное состояние
 class WorkoutInitial extends WorkoutState {}
 
-// Список тренировок загружен
-class WorkoutsLoaded extends WorkoutState {
-  final List<WorkoutModel> workouts;
+class WorkoutLoading extends WorkoutState {}
 
-  WorkoutsLoaded(this.workouts);
+class WorkoutLoaded extends WorkoutState {
+  final List<Workout> workouts;
+  final List<String> favoriteWorkoutIds;
+
+  WorkoutLoaded(this.workouts, this.favoriteWorkoutIds);
 
   @override
-  List<Object?> get props => [workouts];
+  List<Object?> get props => [workouts, favoriteWorkoutIds];
 }
 
-// Ошибка при загрузке тренировок
 class WorkoutError extends WorkoutState {
   final String message;
 

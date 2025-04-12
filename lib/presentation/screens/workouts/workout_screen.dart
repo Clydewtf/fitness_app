@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/workout_bloc/exercise_event.dart';
+import '../../../logic/workout_bloc/workout_event.dart';
 import '../../widgets/workouts/exercise_card.dart';
 import '../../../logic/workout_bloc/exercise_bloc.dart';
 import '../../../logic/workout_bloc/exercise_state.dart';
 import '../../widgets/workouts/filter_bottom_sheet.dart';
+import '../../../logic/workout_bloc/workout_bloc.dart';
+import '../../../logic/workout_bloc/workout_state.dart';
+import '../../widgets/workouts/workout_card.dart';
+import '../../screens/workouts/workout_detail_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
@@ -108,13 +113,169 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
   }
 }
 
-// === Заглушка вкладки тренировок ===
-class WorkoutsTab extends StatelessWidget {
+class WorkoutsTab extends StatefulWidget {
   const WorkoutsTab({super.key});
 
   @override
+  State<WorkoutsTab> createState() => _WorkoutsTabState();
+}
+
+class _WorkoutsTabState extends State<WorkoutsTab> {
+  bool showAllFavorites = false;
+  final PageController _pageController = PageController(viewportFraction: 1.0);
+  int _currentPage = 0;
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Center(child: Text('Здесь будут тренировки'));
+    return BlocBuilder<WorkoutBloc, WorkoutState>(
+      builder: (context, state) {
+        if (state is WorkoutLoading) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (state is WorkoutLoaded) {
+          final all = state.workouts;
+          final favorites = all.where((w) => w.isFavorite).toList();
+          final recommended = all.where((w) => !w.isFavorite).toList();
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.fromLTRB(
+              16,
+              16,
+              16,
+              16 + MediaQuery.of(context).padding.bottom + 48,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ⭐️ Избранные тренировки
+                if (favorites.isNotEmpty) ...[
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text("Избранные", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      TextButton(
+                        onPressed: () => setState(() => showAllFavorites = !showAllFavorites),
+                        child: Text(showAllFavorites ? "Свернуть" : "Развернуть"),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  if (showAllFavorites)
+                    // 👉 Вертикальный список
+                    Column(
+                      children: favorites.map((workout) {
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: WorkoutCard(
+                            workout: workout,
+                          ),
+                        );
+                      }).toList(),
+                    )
+                  else
+                    // 👉 Карусель с полноценной шириной
+                    SizedBox(
+                      height: 220,
+                      child: PageView.builder(
+                        controller: _pageController,
+                        itemCount: favorites.length,
+                        onPageChanged: (index) {
+                          setState(() => _currentPage = index);
+                        },
+                        itemBuilder: (context, index) {
+                          final workout = favorites[index];
+                          return WorkoutCard(
+                            workout: workout,
+                          );
+                        },
+                      ),
+                    ),
+                    if (favorites.length > 1)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: List.generate(favorites.length, (index) {
+                            final isVisible = (index - _currentPage).abs() <= 1;
+                            if (!isVisible) return const SizedBox.shrink();
+
+                            final isActive = index == _currentPage;
+                            return AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              margin: const EdgeInsets.symmetric(horizontal: 4),
+                              width: isActive ? 10 : 8,
+                              height: isActive ? 10 : 8,
+                              decoration: BoxDecoration(
+                                color: isActive ? Colors.blueAccent : Colors.grey[400],
+                                shape: BoxShape.circle,
+                              ),
+                            );
+                          }),
+                        ),
+                      )
+                    else
+                      const SizedBox(height: 24),
+                ],
+
+                // 🏅 Рекомендованные тренировки
+                const Text("Рекомендованные", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: recommended.length,
+                  itemBuilder: (context, index) {
+                    final workout = recommended[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: WorkoutCard(
+                        workout: workout,
+                      ),
+                    );
+                  },
+                ),
+
+                const SizedBox(height: 24),
+
+                // 🔸 Мои тренировки
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // TODO: переход к экрану "Мои тренировки"
+                  },
+                  icon: const Icon(Icons.list_alt_rounded),
+                  label: const Text("Мои тренировки"),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+                const SizedBox(height: 12),
+
+                // ➕ Создать тренировку
+                OutlinedButton.icon(
+                  onPressed: () {
+                    // TODO: переход к экрану создания
+                  },
+                  icon: const Icon(Icons.add_rounded),
+                  label: const Text("Создать тренировку"),
+                  style: OutlinedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                  ),
+                ),
+              ],
+            ),
+          );
+        } else if (state is WorkoutError) {
+          return Center(child: Text("Ошибка: ${state.message}"));
+        } else {
+          return const SizedBox.shrink();
+        }
+      },
+    );
   }
 }
 
