@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/locator.dart';
+import '../../../data/repositories/my_workout_repository.dart';
 import '../../../data/repositories/workout_repository.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
 import '../../../logic/workout_bloc/workout_bloc.dart';
@@ -51,6 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return BlocProvider<WorkoutBloc>(
       create: (_) => WorkoutBloc(
         workoutRepository: locator.get<WorkoutRepository>(),
+        myWorkoutRepository: locator.get<MyWorkoutRepository>(),
         userService: locator.get<UserService>(),
         uid: authState.user.uid,
       )..add(LoadWorkouts()),

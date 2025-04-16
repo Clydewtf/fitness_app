@@ -10,6 +10,7 @@ import '../../../logic/workout_bloc/workout_bloc.dart';
 import '../../../logic/workout_bloc/workout_state.dart';
 import '../../widgets/workouts/workout_card.dart';
 import '../../screens/workouts/workout_detail_screen.dart';
+import '../workouts/workout_create_screen.dart';
 
 class WorkoutScreen extends StatefulWidget {
   const WorkoutScreen({super.key});
@@ -258,7 +259,11 @@ class _WorkoutsTabState extends State<WorkoutsTab> {
                 // ➕ Создать тренировку
                 OutlinedButton.icon(
                   onPressed: () {
-                    // TODO: переход к экрану создания
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => const CreateWorkoutScreen(),
+                      ),
+                    );
                   },
                   icon: const Icon(Icons.add_rounded),
                   label: const Text("Создать тренировку"),
@@ -472,4 +477,4 @@ class _FilterBadgeIcon extends StatelessWidget {
       ],
     );
   }
-} 
+}

@@ -21,3 +21,8 @@ class ToggleFavoriteWorkout extends WorkoutEvent {
   @override
   List<Object?> get props => [workoutId, isFavorite];
 }
+
+class LoadMyWorkouts extends WorkoutEvent {
+  final String uid;
+  const LoadMyWorkouts(this.uid);
+}
