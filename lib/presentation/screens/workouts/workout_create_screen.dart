@@ -1,5 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fitness_app/presentation/screens/workouts/workout_screen.dart';
 import 'package:flutter/material.dart';
 import '../../../data/models/exercise_model.dart';
+import '../../../data/models/workout_model.dart';
+import '../../../data/repositories/my_workout_repository.dart';
+import '../../widgets/workouts/exercise_card.dart';
 
 class CreateWorkoutScreen extends StatefulWidget {
   const CreateWorkoutScreen({super.key});
@@ -20,6 +25,8 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   String? selectedLevel;
   String? selectedType;
   List<String> selectedGoals = [];
+  List<Exercise> selectedExercises = [];
+  Map<String, Map<String, WorkoutMode>> exerciseModesByGoal = {};
 
   bool customLevel = false;
   bool customType = false;
@@ -34,6 +41,18 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   final types = ['Силовая', 'Кардио', 'Растяжка', 'Плиометрика', 'Стронгмен',
       'Пауэрлифтинг', 'Тяжёлая атлетика', 'Кроссфит'];
   final goals = ['Поддержание формы', 'Набор массы', 'Сушка'];
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _taglineController.dispose();
+    _descriptionController.dispose();
+    _durationController.dispose();
+    _customLevelController.dispose();
+    _customTypeController.dispose();
+    _customGoalController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -105,11 +124,161 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
               ),
               const SizedBox(height: 32),
 
+              const Text('Упражнения *'),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  final selected = await Navigator.push<List<Exercise>>(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ExercisesTab(
+                        isSelectionMode: true,
+                        initiallySelected: selectedExercises, // если нужно
+                        selectedMuscleGroup: null,
+                        selectedType: null,
+                        selectedEquipment: null,
+                        selectedLevels: const [],
+                        onFilterChanged: ({muscleGroup, type, equipment, levels}) {},
+                        onOpenFilter: (ctx, groups, types, eq) {},
+                        onSelectionDone: (selectedExercises) {
+                          Navigator.pop(context, selectedExercises);
+                        },
+                      ),
+                    ),
+                  );
+
+                  if (selected != null && selected.isNotEmpty) {
+                    setState(() {
+                      selectedExercises = selected;
+                    });
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Добавить упражнения'),
+              ),
+
+              if (selectedExercises.isNotEmpty) ...[
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    'Выбранные упражнения:',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: selectedExercises.length,
+                  itemBuilder: (context, index) {
+                    final exercise = selectedExercises[index];
+                    return Dismissible(
+                      key: ValueKey(exercise.id),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (_) {
+                        setState(() {
+                          selectedExercises.removeAt(index);
+                        });
+                      },
+                      background: Container(
+                        color: Colors.red,
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: const Icon(Icons.delete, color: Colors.white),
+                      ),
+                      child: ExerciseCard(exercise: exercise),
+                    );
+                  },
+                ),
+              ],
+
+              if (selectedExercises.isNotEmpty && selectedGoals.isNotEmpty)
+                _buildExerciseModesSection(),
+
               ElevatedButton(
-                onPressed: () {
+                onPressed: () async {
                   if (_formKey.currentState!.validate()) {
-                    // TODO: сохранить тренировку
-                    print('Сохраняем...');
+                    if (selectedExercises.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Добавьте хотя бы одно упражнение')),
+                      );
+                      return;
+                    }
+
+                    if (selectedGoals.isEmpty) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Выберите хотя бы одну цель')),
+                      );
+                      return;
+                    }
+
+                    try {
+                      // 1. Собираем данные из формы
+                      final name = _nameController.text.trim();
+                      final tagline = _taglineController.text.trim();
+                      final description = _descriptionController.text.trim();
+                      final level = customLevel
+                          ? _customLevelController.text.trim()
+                          : selectedLevel ?? '';
+                      final type = customType
+                          ? _customTypeController.text.trim()
+                          : selectedType ?? '';
+                      final goals = selectedGoals;
+                      final duration = int.tryParse(_durationController.text.trim()) ?? 0;
+                      final muscleGroups = _extractMuscleGroupsFromExercises(selectedExercises);
+
+                      final List<WorkoutExercise> workoutExercises = selectedExercises.map((exercise) {
+                        final Map<String, WorkoutMode> modes = {};
+
+                        for (final goal in selectedGoals) {
+                          final mode = exerciseModesByGoal[goal]?[exercise.id];
+                          if (mode != null) {
+                            modes[goal] = mode;
+                          }
+                        }
+
+                        return WorkoutExercise(
+                          exerciseId: exercise.id,
+                          modes: modes,
+                        );
+                      }).toList();
+
+                      // 2. Создаем объект Workout
+                      final workout = Workout(
+                        id: '', // временно пустой, добавится внутри репозитория
+                        name: name,
+                        tagline: tagline,
+                        description: description,
+                        level: level,
+                        type: type,
+                        targetGoals: goals,
+                        muscleGroups: muscleGroups,
+                        duration: duration,
+                        isFavorite: false,
+                        exercises: workoutExercises,
+                      );
+
+                      // 3. Получаем uid
+                      final uid = FirebaseAuth.instance.currentUser?.uid;
+                      if (uid == null) {
+                        throw Exception('Пользователь не авторизован');
+                      }
+
+                      // 4. Сохраняем тренировку
+                      await MyWorkoutRepository().addWorkout(uid, workout);
+
+                      // 5. Навигация или сообщение
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Тренировка успешно сохранена')),
+                        );
+                        Navigator.pop(context); // или перейти на экран с тренировками
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Ошибка: ${e.toString()}')),
+                        );
+                      }
+                    }
                   }
                 },
                 child: const Text('Сохранить тренировку'),
@@ -119,6 +288,15 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         ),
       ),
     );
+  }
+
+  List<String> _extractMuscleGroupsFromExercises(List<Exercise> exercises) {
+    final Set<String> groups = {};
+    for (final ex in exercises) {
+      groups.addAll(ex.primaryMuscles);
+      groups.addAll(ex.secondaryMuscles ?? []);
+    }
+    return groups.toList();
   }
 
   Widget _buildDropdownOrCustom({
@@ -170,11 +348,49 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
       children: [
         const Text('Цели *'),
         if (customGoal)
-          TextFormField(
-            controller: _customGoalController,
-            decoration: const InputDecoration(hintText: 'Введите цель'),
-            validator: (val) =>
-                val == null || val.isEmpty ? 'Укажите цель' : null,
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextFormField(
+                controller: _customGoalController,
+                decoration: const InputDecoration(hintText: 'Введите цель'),
+                validator: (val) {
+                  if (val == null || val.isEmpty) return 'Укажите цель';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () {
+                  final goal = _customGoalController.text.trim();
+                  if (goal.isNotEmpty && !selectedGoals.contains(goal)) {
+                    setState(() {
+                      selectedGoals.add(goal);
+                      _customGoalController.clear();
+                    });
+                  }
+                },
+                child: const Text('Добавить цель'),
+              ),
+              if (selectedGoals.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Wrap(
+                    spacing: 8,
+                    children: selectedGoals
+                        .where((g) => !goals.contains(g))
+                        .map((goal) => Chip(
+                              label: Text(goal),
+                              onDeleted: () {
+                                setState(() {
+                                  selectedGoals.remove(goal);
+                                });
+                              },
+                            ))
+                        .toList(),
+                  ),
+                ),
+            ],
           )
         else
           Wrap(
@@ -199,33 +415,116 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: () => setState(() => customGoal = !customGoal),
+            onPressed: () {
+              setState(() {
+                customGoal = !customGoal;
+                if (!customGoal) {
+                  _customGoalController.clear();
+                  // Очищаем из selectedGoals кастомную цель, если была
+                  selectedGoals.removeWhere(
+                      (goal) => !goals.contains(goal));
+                }
+              });
+            },
             child: Text(customGoal ? 'Выбрать из списка' : 'Ввести своё'),
           ),
         )
       ],
     );
   }
-}
 
-class SelectedExercise {
-  final Exercise exercise;
-  final Map<String, ExerciseParams> parametersByGoal;
+  Widget _buildExerciseModesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: selectedExercises.map((exercise) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 16),
+            Text(
+              exercise.name,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            ...selectedGoals.map((goal) {
+              // Инициализация, если нужно
+              exerciseModesByGoal.putIfAbsent(goal, () => {});
+              exerciseModesByGoal[goal]!.putIfAbsent(exercise.id, () => WorkoutMode(sets: 0, reps: 0, restSeconds: 0));
 
-  SelectedExercise({
-    required this.exercise,
-    required this.parametersByGoal,
-  });
-}
+              final mode = exerciseModesByGoal[goal]![exercise.id]!;
 
-class ExerciseParams {
-  int sets;
-  int reps;
-  int restSeconds;
-
-  ExerciseParams({
-    required this.sets,
-    required this.reps,
-    required this.restSeconds,
-  });
+              return Padding(
+                padding: const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(goal, style: const TextStyle(fontWeight: FontWeight.w500)),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: mode.sets.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Подходы'),
+                            onChanged: (val) {
+                              final parsed = int.tryParse(val);
+                              if (parsed != null) {
+                                final current = exerciseModesByGoal[goal]![exercise.id]!;
+                                exerciseModesByGoal[goal]![exercise.id] = WorkoutMode(
+                                  sets: parsed,
+                                  reps: current.reps,
+                                  restSeconds: current.restSeconds,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: mode.reps.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Повторы'),
+                            onChanged: (val) {
+                              final parsed = int.tryParse(val);
+                              if (parsed != null) {
+                                final current = exerciseModesByGoal[goal]![exercise.id]!;
+                                exerciseModesByGoal[goal]![exercise.id] = WorkoutMode(
+                                  sets: current.sets,
+                                  reps: parsed,
+                                  restSeconds: current.restSeconds,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: TextFormField(
+                            initialValue: mode.restSeconds.toString(),
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(labelText: 'Отдых (сек)'),
+                            onChanged: (val) {
+                              final parsed = int.tryParse(val);
+                              if (parsed != null) {
+                                final current = exerciseModesByGoal[goal]![exercise.id]!;
+                                exerciseModesByGoal[goal]![exercise.id] = WorkoutMode(
+                                  sets: current.sets,
+                                  reps: current.reps,
+                                  restSeconds: parsed,
+                                );
+                              }
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
+        );
+      }).toList(),
+    );
+  }
 }

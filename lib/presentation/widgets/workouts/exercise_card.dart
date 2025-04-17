@@ -97,3 +97,36 @@ class ExerciseCard extends StatelessWidget {
     );
   }
 }
+
+class SelectableExerciseCard extends StatelessWidget {
+  final Exercise exercise;
+  final bool isSelected;
+  final ValueChanged<bool> onSelected;
+
+  const SelectableExerciseCard({
+    super.key,
+    required this.exercise,
+    required this.isSelected,
+    required this.onSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => onSelected(!isSelected),
+      child: Stack(
+        children: [
+          ExerciseCard(exercise: exercise),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: Icon(
+              isSelected ? Icons.check_circle : Icons.radio_button_unchecked,
+              color: isSelected ? Colors.green : Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

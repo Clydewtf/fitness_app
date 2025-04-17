@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../data/models/exercise_model.dart';
 import '../../../logic/workout_bloc/exercise_event.dart';
 import '../../../logic/workout_bloc/workout_event.dart';
 import '../../widgets/workouts/exercise_card.dart';
@@ -285,6 +286,9 @@ class _WorkoutsTabState extends State<WorkoutsTab> {
 }
 
 class ExercisesTab extends StatefulWidget {
+  final bool isSelectionMode;
+  final List<Exercise> initiallySelected;
+  final void Function(List<Exercise>)? onSelectionDone;
   final String? selectedMuscleGroup;
   final String? selectedType;
   final String? selectedEquipment;  
@@ -310,6 +314,9 @@ class ExercisesTab extends StatefulWidget {
     required this.selectedLevels,
     required this.onFilterChanged,
     required this.onOpenFilter,
+    this.isSelectionMode = false,
+    this.initiallySelected = const [],
+    this.onSelectionDone,
   });
 
   @override
@@ -329,6 +336,14 @@ class _ExercisesTabState extends State<ExercisesTab> {
         searchQuery: query,
       ),
     );
+  }
+  
+  late List<Exercise> selectedExercises = [];
+
+  @override
+  void initState() {
+    super.initState();
+    selectedExercises = List.from(widget.initiallySelected);
   }
 
   @override
@@ -404,10 +419,38 @@ class _ExercisesTabState extends State<ExercisesTab> {
                           itemCount: filtered.length,
                           itemBuilder: (context, index) {
                             final exercise = filtered[index];
-                            return ExerciseCard(exercise: exercise);
+                            if (widget.isSelectionMode) {
+                              final isSelected = selectedExercises.any((e) => e.id == exercise.id);
+                              return SelectableExerciseCard(
+                                exercise: exercise,
+                                isSelected: isSelected,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    if (selected) {
+                                      selectedExercises.add(exercise);
+                                    } else {
+                                      selectedExercises.removeWhere((e) => e.id == exercise.id);
+                                    }
+                                  });
+                                },
+                              );
+                            } else {
+                              return ExerciseCard(exercise: exercise);
+                            }
                           },
                         ),
                 ),
+                if (widget.isSelectionMode)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        widget.onSelectionDone?.call(selectedExercises);
+                      },
+                      icon: const Icon(Icons.check),
+                      label: const Text('Готово'),
+                    ),
+                  ),
               ],
             ),
           );
