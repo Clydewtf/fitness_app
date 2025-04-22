@@ -3,6 +3,8 @@ import '../../../core/locator.dart';
 import '../../../data/repositories/my_workout_repository.dart';
 import '../../../data/repositories/workout_repository.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
+import '../../../logic/workout_bloc/my_workout_bloc.dart';
+import '../../../logic/workout_bloc/my_workout_event.dart';
 import '../../../logic/workout_bloc/workout_bloc.dart';
 import '../../../logic/workout_bloc/workout_event.dart';
 import '../../../services/user_service.dart';
@@ -26,12 +28,18 @@ class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
 
   // Список экранов
-  final List<Widget> _screens = [
-    WorkoutScreen(),
-    NutritionScreen(),
-    ProgressScreen(),
-    ProfileScreen(),
-  ];
+  late final List<Widget> _screens;
+
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      WorkoutScreen(),
+      NutritionScreen(),
+      ProgressScreen(),
+      ProfileScreen(),
+    ];
+  }
 
   void _onItemTapped(int index) {
     setState(() {
@@ -49,13 +57,21 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
 
-    return BlocProvider<WorkoutBloc>(
-      create: (_) => WorkoutBloc(
-        workoutRepository: locator.get<WorkoutRepository>(),
-        myWorkoutRepository: locator.get<MyWorkoutRepository>(),
-        userService: locator.get<UserService>(),
-        uid: authState.user.uid,
-      )..add(LoadWorkouts()),
+    return MultiBlocProvider(
+      providers: [
+        BlocProvider(
+          create: (_) => WorkoutBloc(
+            workoutRepository: locator.get<WorkoutRepository>(),
+            userService: locator.get<UserService>(),
+            uid: authState.user.uid,
+          )..add(LoadWorkouts()),
+        ),
+        BlocProvider(
+          create: (_) => MyWorkoutBloc(
+            locator.get<MyWorkoutRepository>(),
+          )..add(LoadMyWorkouts(authState.user.uid)),
+        ),
+      ],
       child: Scaffold(
         appBar: AppBar(),
         body: Stack(

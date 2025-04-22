@@ -52,7 +52,6 @@ class MyApp extends StatelessWidget {
         BlocProvider<NotificationBloc>(create: (context) => NotificationBloc(notificationService: locator<NotificationService>())..add(LoadNotificationsEvent()),),
         BlocProvider(create: (context) => ThemeCubit()..loadTheme()),
         BlocProvider(create: (context) => locator<ExerciseBloc>()..add(LoadExercises()),),
-        // BlocProvider<WorkoutBloc>(create: (context) => WorkoutBloc(workoutRepository: locator.get())..add(LoadWorkouts()),),
       ],
       child: BlocBuilder<ThemeCubit, ThemeState>(
         builder: (context, state) {

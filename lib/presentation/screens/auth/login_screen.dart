@@ -60,6 +60,22 @@ class _LoginScreenState extends State<LoginScreen> {
                 );
               },
             ),
+            TextButton(
+              onPressed: () {
+                final email = emailController.text.trim();
+                if (email.isNotEmpty) {
+                  context.read<AuthBloc>().add(ForgotPassword(email));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Письмо с инструкциями отправлено")),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("Введите email для сброса пароля")),
+                  );
+                }
+              },
+              child: const Text("Забыли пароль?"),
+            ),
             TextButton( 
               onPressed: () {
                 Navigator.push(

@@ -13,16 +13,14 @@ class WorkoutLoading extends WorkoutState {}
 class WorkoutLoaded extends WorkoutState {
   final List<Workout> workouts;
   final List<String> favoriteWorkoutIds;
-  final List<Workout> myWorkouts;
 
   WorkoutLoaded(
     this.workouts,
-    this.favoriteWorkoutIds, {
-    this.myWorkouts = const [],
-  });
+    this.favoriteWorkoutIds,
+  );
 
   @override
-  List<Object?> get props => [workouts, favoriteWorkoutIds, myWorkouts];
+  List<Object?> get props => [workouts, favoriteWorkoutIds];
 }
 
 class WorkoutError extends WorkoutState {

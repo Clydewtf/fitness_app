@@ -45,4 +45,13 @@ class MyWorkoutRepository {
         .doc(workoutId)
         .delete();
   }
+
+  Future<void> updateFavoriteStatus(String uid, String workoutId, bool isFavorite) async {
+    await _firestore
+        .collection('users')
+        .doc(uid)
+        .collection('my_workouts')
+        .doc(workoutId)
+        .update({'isFavorite': isFavorite});
+  }
 }

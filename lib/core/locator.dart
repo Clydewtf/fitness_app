@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import '../logic/workout_bloc/my_workout_bloc.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
 import '../data/repositories/exercise_repository.dart';
@@ -28,8 +29,8 @@ void setupLocator() {
 
   // Регистрация BLoC (создаются каждый раз при запросе)
   locator.registerFactory(() => AuthBloc(locator<AuthService>()));
-  // locator.registerFactory(() => WorkoutBloc(workoutRepository: locator<WorkoutRepository>()));
   locator.registerFactory(() => ExerciseBloc(exerciseRepository: locator<ExerciseRepository>()));
   locator.registerFactory(() => NutritionBloc(locator<NutritionRepository>()));
   locator.registerFactory(() => NotificationBloc(notificationService: locator<NotificationService>()));
+  locator.registerFactory(() => MyWorkoutBloc(locator<MyWorkoutRepository>()));
 }

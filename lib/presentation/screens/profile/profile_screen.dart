@@ -85,7 +85,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 DropdownButtonFormField<String>(
                   value: _selectedGoal,
                   decoration: const InputDecoration(labelText: "Цель"),
-                  items: ["Набор массы", "Сушка", "Поддержание формы"]
+                  items: ["Набор массы", "Сушка", "Поддержание формы", "Сила", "Выносливость"]
                       .map((goal) => DropdownMenuItem(value: goal, child: Text(goal)))
                       .toList(),
                   onChanged: (value) {

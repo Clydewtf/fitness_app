@@ -38,3 +38,12 @@ class LogoutUser extends AuthEvent {}
 
 // Сброс ошибки после отображения
 class ResetAuthState extends AuthEvent {}
+
+class ForgotPassword extends AuthEvent {
+  final String email;
+
+  ForgotPassword(this.email);
+
+  @override
+  List<Object?> get props => [email];
+}

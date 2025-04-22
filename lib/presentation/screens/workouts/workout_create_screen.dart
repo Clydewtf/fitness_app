@@ -1,13 +1,18 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:fitness_app/presentation/screens/workouts/workout_screen.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/exercise_model.dart';
 import '../../../data/models/workout_model.dart';
+import '../../../data/repositories/exercise_repository.dart';
 import '../../../data/repositories/my_workout_repository.dart';
+import '../../../logic/workout_bloc/my_workout_bloc.dart';
+import '../../../logic/workout_bloc/my_workout_event.dart';
 import '../../widgets/workouts/exercise_card.dart';
 
 class CreateWorkoutScreen extends StatefulWidget {
-  const CreateWorkoutScreen({super.key});
+  final Workout? existingWorkout;
+  const CreateWorkoutScreen({super.key, this.existingWorkout});
 
   @override
   State<CreateWorkoutScreen> createState() => _CreateWorkoutScreenState();
@@ -39,8 +44,44 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
   // Примерные варианты
   final levels = ['Новичок', 'Средний', 'Продвинутый'];
   final types = ['Силовая', 'Кардио', 'Растяжка', 'Плиометрика', 'Стронгмен',
-      'Пауэрлифтинг', 'Тяжёлая атлетика', 'Кроссфит'];
-  final goals = ['Поддержание формы', 'Набор массы', 'Сушка'];
+      'Пауэрлифтинг', 'Тяжёлая атлетика', 'Кроссфит', 'Функциональная'];
+  final goals = ['Поддержание формы', 'Набор массы', 'Сушка', 'Сила', 'Выносливость'];
+
+  @override
+  void initState() {
+    super.initState();
+
+    final workout = widget.existingWorkout;
+    if (workout != null) {
+      _nameController.text = workout.name;
+      _taglineController.text = workout.tagline ?? '';
+      _descriptionController.text = workout.description ?? '';
+      _durationController.text = workout.duration.toString();
+      selectedLevel = workout.level;
+      selectedType = workout.type;
+      selectedGoals = List.from(workout.targetGoals);
+      selectedExercises = []; // Заполним ниже из workout.exercises
+
+      // Здесь можно будет загрузить полные объекты Exercise по id
+      Future.microtask(() async {
+        final repo = ExerciseRepository();
+        final exercises = await Future.wait(
+          workout.exercises.map((e) => repo.getExerciseById(e.exerciseId)),
+        );
+
+        setState(() {
+          selectedExercises = exercises.whereType<Exercise>().toList();
+
+          for (final workoutExercise in workout.exercises) {
+            for (final entry in workoutExercise.modes.entries) {
+              exerciseModesByGoal.putIfAbsent(entry.key, () => {});
+              exerciseModesByGoal[entry.key]![workoutExercise.exerciseId] = entry.value;
+            }
+          }
+        });
+      });
+    }
+  }
 
   @override
   void dispose() {
@@ -243,7 +284,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
 
                       // 2. Создаем объект Workout
                       final workout = Workout(
-                        id: '', // временно пустой, добавится внутри репозитория
+                        id: widget.existingWorkout?.id ?? '', // если редактируем, сохраняем ID
                         name: name,
                         tagline: tagline,
                         description: description,
@@ -252,7 +293,7 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                         targetGoals: goals,
                         muscleGroups: muscleGroups,
                         duration: duration,
-                        isFavorite: false,
+                        isFavorite: widget.existingWorkout?.isFavorite ?? false,
                         exercises: workoutExercises,
                       );
 
@@ -263,14 +304,18 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                       }
 
                       // 4. Сохраняем тренировку
-                      await MyWorkoutRepository().addWorkout(uid, workout);
+                      if (widget.existingWorkout != null) {
+                        await MyWorkoutRepository().updateWorkout(uid, workout.id, workout);
+                      } else {
+                        await MyWorkoutRepository().addWorkout(uid, workout);
+                      }
 
                       // 5. Навигация или сообщение
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Тренировка успешно сохранена')),
                         );
-                        Navigator.pop(context); // или перейти на экран с тренировками
+                        Navigator.pop(context, true); // или перейти на экран с тренировками
                       }
                     } catch (e) {
                       if (context.mounted) {
@@ -355,7 +400,10 @@ class _CreateWorkoutScreenState extends State<CreateWorkoutScreen> {
                 controller: _customGoalController,
                 decoration: const InputDecoration(hintText: 'Введите цель'),
                 validator: (val) {
-                  if (val == null || val.isEmpty) return 'Укажите цель';
+                  final trimmed = val?.trim();
+                  if ((trimmed == null || trimmed.isEmpty) && !selectedGoals.any((g) => !goals.contains(g))) {
+                    return 'Укажите цель';
+                  }
                   return null;
                 },
               ),

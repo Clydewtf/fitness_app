@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../../logic/auth_bloc/auth_bloc.dart';
+import '../../../logic/auth_bloc/auth_state.dart';
 import '../../../logic/workout_bloc/exercise_bloc.dart';
+import '../../../logic/workout_bloc/my_workout_event.dart';
+import '../../../logic/workout_bloc/my_workout_state.dart';
 import '../../../logic/workout_bloc/workout_bloc.dart';
+import '../../../logic/workout_bloc/my_workout_bloc.dart';
 import '../../../data/models/workout_model.dart';
 import '../../../logic/workout_bloc/workout_event.dart';
 import '../../../logic/workout_bloc/workout_state.dart';
@@ -9,11 +14,24 @@ import '../../screens/workouts/workout_detail_screen.dart';
 
 class WorkoutCard extends StatelessWidget {
   final Workout workout;
+  final bool isMyWorkout;
 
-  const WorkoutCard({super.key, required this.workout});
+  const WorkoutCard({
+    super.key,
+    required this.workout,
+    this.isMyWorkout = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final authState = context.watch<AuthBloc>().state;
+
+    if (authState is! Authenticated) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return InkWell(
       borderRadius: BorderRadius.circular(16),
       onTap: () {
@@ -21,14 +39,14 @@ class WorkoutCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => MultiBlocProvider(
               providers: [
-                BlocProvider.value(
-                  value: context.read<WorkoutBloc>(),
-                ),
-                BlocProvider.value(
-                  value: context.read<ExerciseBloc>(),
-                ),
+                BlocProvider.value(value: context.read<WorkoutBloc>()),
+                BlocProvider.value(value: context.read<MyWorkoutBloc>()),
+                BlocProvider.value(value: context.read<ExerciseBloc>()),
               ],
-              child: WorkoutDetailScreen(workout: workout),
+              child: WorkoutDetailScreen(
+                workout: workout,
+                isMyWorkout: isMyWorkout,
+              ),
             ),
           ),
         );
@@ -52,25 +70,53 @@ class WorkoutCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                       overflow: TextOverflow.ellipsis,
                     ),
-                  ),
-                  BlocBuilder<WorkoutBloc, WorkoutState>(
-                    builder: (context, state) {
-                      final isFavorite = state is WorkoutLoaded &&
-                              state.favoriteWorkoutIds.contains(workout.id);
-
-                      return IconButton(
-                        icon: Icon(
-                          isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                          color: Colors.amber,
-                        ),
-                        onPressed: () {
-                          context.read<WorkoutBloc>().add(
-                            ToggleFavoriteWorkout(workoutId: workout.id, isFavorite: !isFavorite),
+                  ),                  
+                  isMyWorkout
+                    ? BlocBuilder<MyWorkoutBloc, MyWorkoutState>(
+                        builder: (context, state) {
+                          final isFavorite = workout.isFavorite;
+                          return IconButton(
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.star_rounded
+                                  : Icons.star_border_rounded,
+                              color: Colors.amber,
+                            ),
+                            onPressed: () {
+                              context.read<MyWorkoutBloc>().add(
+                                ToggleFavoriteMyWorkout(
+                                  uid: authState.user.uid,
+                                  workoutId: workout.id,
+                                  isFavorite: !isFavorite,
+                                ),
+                              );
+                            },
                           );
                         },
-                      );
-                    },
-                  ),
+                      )
+                    : BlocBuilder<WorkoutBloc, WorkoutState>(
+                        builder: (context, state) {
+                          final isFavorite = state is WorkoutLoaded &&
+                              state.favoriteWorkoutIds
+                                  .contains(workout.id);
+                          return IconButton(
+                            icon: Icon(
+                              isFavorite
+                                  ? Icons.star_rounded
+                                  : Icons.star_border_rounded,
+                              color: Colors.amber,
+                            ),
+                            onPressed: () {
+                              context.read<WorkoutBloc>().add(
+                                ToggleFavoriteWorkout(
+                                  workoutId: workout.id,
+                                  isFavorite: !isFavorite,
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
                 ],
               ),
               const SizedBox(height: 8),

@@ -10,7 +10,7 @@ class Workout {
   final List<WorkoutExercise> exercises; // список упражнений с подходами/повторами
   final int duration; // продолжительность в минутах (можно примерно)
   final bool isFavorite;
-
+  
   Workout({
     required this.id,
     required this.name,

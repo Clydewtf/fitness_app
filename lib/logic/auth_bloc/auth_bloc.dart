@@ -17,31 +17,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResetAuthState>((event, emit) {
       emit(AuthInitial());
     });
+    on<ForgotPassword>(_onForgotPassword);
   }
-
-  // Загрузка пользователя
-  // Future<void> _onLoadUser(LoadUser event, Emitter<AuthState> emit) async {
-  //   try {
-  //     final user = await userRepository.loadUser();
-  //     if (user != null) {
-  //       emit(AuthLoaded(user));
-  //     } else {
-  //       emit(AuthInitial());
-  //     }
-  //   } catch (e) {
-  //     emit(AuthError("Ошибка загрузки данных"));
-  //   }
-  // }
-
-  // Сохранение пользователя
-  // Future<void> _onSaveUser(SaveUser event, Emitter<AuthState> emit) async {
-  //   try {
-  //     await userRepository.saveUser(event.user);
-  //     emit(AuthLoaded(event.user));
-  //   } catch (e) {
-  //     emit(AuthError("Ошибка сохранения данных"));
-  //   }
-  // }
 
   // Выход пользователя
   Future<void> _onLogoutUser(LogoutUser event, Emitter<AuthState> emit) async {
@@ -85,6 +62,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       }
     } catch (e) {
       emit(AuthError("Ошибка: $e"));
+    }
+  }
+
+  Future<void> _onForgotPassword(ForgotPassword event, Emitter<AuthState> emit) async {
+    emit(AuthLoading());
+    try {
+      await _authService.sendPasswordResetEmail(event.email);
+      emit(AuthInitial()); // или можешь сделать отдельное состояние типа PasswordResetSent()
+    } catch (e) {
+      emit(AuthFailure("Ошибка сброса пароля"));
     }
   }
 }

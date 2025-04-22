@@ -3,24 +3,19 @@ import '../../services/user_service.dart';
 import 'workout_event.dart';
 import 'workout_state.dart';
 import '../../data/repositories/workout_repository.dart';
-import '../../data/repositories/my_workout_repository.dart';
-import '../../data/models/workout_model.dart';
 
 class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
   final WorkoutRepository workoutRepository;
-  final MyWorkoutRepository myWorkoutRepository;
   final UserService userService;
   final String uid;
 
   WorkoutBloc({
     required this.workoutRepository,
-    required this.myWorkoutRepository,
     required this.userService,
     required this.uid,
   }) : super(WorkoutInitial()) {
     on<LoadWorkouts>(_onLoadWorkouts);
     on<ToggleFavoriteWorkout>(_onToggleFavorite);
-    on<LoadMyWorkouts>(_onLoadMyWorkouts);
   }
 
   Future<void> _onLoadWorkouts(LoadWorkouts event, Emitter<WorkoutState> emit) async {
@@ -37,22 +32,6 @@ class WorkoutBloc extends Bloc<WorkoutEvent, WorkoutState> {
       emit(WorkoutLoaded(updatedWorkouts, favoriteIds));
     } catch (e) {
       emit(WorkoutError("Не удалось загрузить тренировки"));
-    }
-  }
-
-  Future<void> _onLoadMyWorkouts(LoadMyWorkouts event, Emitter<WorkoutState> emit) async {
-    final currentState = state;
-    if (currentState is WorkoutLoaded) {
-      try {
-        final myWorkouts = await myWorkoutRepository.fetchMyWorkouts(event.uid);
-        emit(WorkoutLoaded(
-          currentState.workouts,
-          currentState.favoriteWorkoutIds,
-          myWorkouts: myWorkouts,
-        ));
-      } catch (e) {
-        emit(WorkoutError("Не удалось загрузить ваши тренировки"));
-      }
     }
   }
 
