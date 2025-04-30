@@ -114,6 +114,8 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
         currentSetIndex: nextSetIndex,
         isResting: true,
         restSecondsLeft: currentExercise.workoutMode.restSeconds,
+        restDurationSeconds: currentExercise.workoutMode.restSeconds,
+        restStartTime: DateTime.now(),
       ));
 
       Future.microtask(_startRestTimer);
@@ -177,15 +179,20 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
   }
 
   void _onRestTick(RestTick event, Emitter emit) {
-    if (state.restSecondsLeft == null) return;
+    final startTime = state.restStartTime;
+    final duration = state.restDurationSeconds;
 
-    final secondsLeft = state.restSecondsLeft! - 1;
+    if (startTime == null || duration == null) return;
+
+    final secondsPassed = DateTime.now().difference(startTime).inSeconds;
+    final secondsLeft = duration - secondsPassed;
 
     if (secondsLeft <= 0) {
       _restTimer?.cancel();
       emit(state.copyWith(
         isResting: false,
         restSecondsLeft: null,
+        restStartTime: null,
       ));
     } else {
       emit(state.copyWith(
@@ -193,4 +200,22 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
       ));
     }
   }
+
+  // void _onRestTick(RestTick event, Emitter emit) {
+  //   if (state.restSecondsLeft == null) return;
+
+  //   final secondsLeft = state.restSecondsLeft! - 1;
+
+  //   if (secondsLeft <= 0) {
+  //     _restTimer?.cancel();
+  //     emit(state.copyWith(
+  //       isResting: false,
+  //       restSecondsLeft: null,
+  //     ));
+  //   } else {
+  //     emit(state.copyWith(
+  //       restSecondsLeft: secondsLeft,
+  //     ));
+  //   }
+  // }
 }

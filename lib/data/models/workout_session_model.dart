@@ -15,9 +15,9 @@ class WorkoutSession {
     this.endTime,
   });
 
-  Duration get duration => endTime != null
-      ? endTime!.difference(startTime)
-      : DateTime.now().difference(startTime);
+  // Duration get duration => endTime != null
+  //     ? endTime!.difference(startTime)
+  //     : DateTime.now().difference(startTime);
 
   bool get isCompleted => exercises.every((e) => e.status == ExerciseStatus.done);
 }

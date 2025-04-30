@@ -6,6 +6,8 @@ class WorkoutSessionState {
   final int currentSetIndex; // индекс подхода (0 = первый)
   final bool isResting; // идет ли сейчас отдых
   final int? restSecondsLeft;
+  final int? restDurationSeconds;
+  final DateTime? restStartTime;
   final bool shouldAutoAdvance;
   final int? nextIndex;
   //final Duration? restTimer; // оставшееся время отдыха (если есть)
@@ -18,6 +20,8 @@ class WorkoutSessionState {
     this.currentSetIndex = 0,
     this.isResting = false,
     this.restSecondsLeft,
+    this.restDurationSeconds,
+    this.restStartTime,
     this.shouldAutoAdvance = false,
     this.nextIndex,
     //this.restTimer,
@@ -29,6 +33,8 @@ class WorkoutSessionState {
     int? currentSetIndex,
     bool? isResting,
     int? restSecondsLeft,
+    int? restDurationSeconds,
+    DateTime? restStartTime,
     bool? shouldAutoAdvance,
     int? nextIndex,
     //Duration? restTimer,
@@ -39,6 +45,8 @@ class WorkoutSessionState {
       currentSetIndex: currentSetIndex ?? this.currentSetIndex,
       isResting: isResting ?? this.isResting,
       restSecondsLeft: restSecondsLeft ?? this.restSecondsLeft,
+      restDurationSeconds: restDurationSeconds ?? this.restDurationSeconds,
+      restStartTime: restStartTime ?? this.restStartTime,
       shouldAutoAdvance: shouldAutoAdvance ?? this.shouldAutoAdvance,
       nextIndex: nextIndex ?? this.nextIndex,
       //restTimer: restTimer ?? this.restTimer,
