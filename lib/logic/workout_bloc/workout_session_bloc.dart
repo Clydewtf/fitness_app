@@ -84,11 +84,49 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
     ));
   }
   
+  // void _onCompleteSet(CompleteSet event, Emitter emit) {
+  //   final session = state.session!;
+  //   final exercises = List<WorkoutExerciseProgress>.from(session.exercises);
+  //   final currentExercise = exercises[state.currentExerciseIndex];
+  //   final setsRequired = currentExercise.workoutMode.sets; // сколько всего подходов
+
+  //   final nextSetIndex = state.currentSetIndex + 1;
+
+  //   if (nextSetIndex >= setsRequired) {
+  //     // Все подходы сделаны → завершить упражнение
+  //     exercises[state.currentExerciseIndex] = currentExercise.copyWith(
+  //       status: ExerciseStatus.done,
+  //     );
+
+  //     final nextIndex = findNextIncompleteExercise(exercises, state.currentExerciseIndex);
+
+  //     emit(state.copyWith(
+  //       session: session.copyWith(exercises: exercises),
+  //       //currentExerciseIndex: nextIndex ?? exercises.length,
+  //       currentSetIndex: 0,
+  //       isResting: false,
+  //       restSecondsLeft: null,
+  //       shouldAutoAdvance: nextIndex != null,
+  //       nextIndex: nextIndex,
+  //     ));
+  //   } else {
+  //     emit(state.copyWith(
+  //       currentSetIndex: nextSetIndex,
+  //       isResting: true,
+  //       restSecondsLeft: currentExercise.workoutMode.restSeconds,
+  //       restDurationSeconds: currentExercise.workoutMode.restSeconds,
+  //       restStartTime: DateTime.now(),
+  //     ));
+
+  //     Future.microtask(_startRestTimer);
+  //   }
+  // }
+
   void _onCompleteSet(CompleteSet event, Emitter emit) {
     final session = state.session!;
     final exercises = List<WorkoutExerciseProgress>.from(session.exercises);
     final currentExercise = exercises[state.currentExerciseIndex];
-    final setsRequired = currentExercise.workoutMode.sets; // сколько всего подходов
+    final setsRequired = currentExercise.workoutMode.sets;
 
     final nextSetIndex = state.currentSetIndex + 1;
 
@@ -100,15 +138,32 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
 
       final nextIndex = findNextIncompleteExercise(exercises, state.currentExerciseIndex);
 
-      emit(state.copyWith(
-        session: session.copyWith(exercises: exercises),
-        //currentExerciseIndex: nextIndex ?? exercises.length,
-        currentSetIndex: 0,
-        isResting: false,
-        restSecondsLeft: null,
-        shouldAutoAdvance: nextIndex != null,
-        nextIndex: nextIndex,
-      ));
+      if (nextIndex == null) {
+        // Все упражнения завершены → завершить тренировку
+        final finishedSession = session.copyWith(
+          exercises: exercises,
+          endTime: DateTime.now(),
+        );
+        emit(state.copyWith(
+          session: finishedSession,
+          isWorkoutFinished: true,
+          currentSetIndex: 0,
+          isResting: false,
+          restSecondsLeft: null,
+          shouldAutoAdvance: false,
+          nextIndex: null,
+        ));
+      } else {
+        // Переход к следующему упражнению
+        emit(state.copyWith(
+          session: session.copyWith(exercises: exercises),
+          currentSetIndex: 0,
+          isResting: false,
+          restSecondsLeft: null,
+          shouldAutoAdvance: true,
+          nextIndex: nextIndex,
+        ));
+      }
     } else {
       emit(state.copyWith(
         currentSetIndex: nextSetIndex,
@@ -167,7 +222,7 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
   void _onFinishSession(FinishWorkoutSession event, Emitter emit) {
     final session = state.session!;
     session.endTime = DateTime.now();
-    emit(state.copyWith(session: session));
+    emit(state.copyWith(session: session, isWorkoutFinished: true));
   }
 
   void _startRestTimer() {

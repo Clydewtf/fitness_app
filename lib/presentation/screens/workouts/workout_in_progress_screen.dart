@@ -11,6 +11,8 @@ import '../../../logic/workout_bloc/workout_session_bloc.dart';
 import '../../../data/models/workout_session_model.dart';
 import '../../../logic/workout_bloc/workout_session_event.dart';
 import '../../../logic/workout_bloc/workout_session_state.dart';
+import '../../widgets/workouts/workout_summary_bottom_sheet.dart';
+import '../home/home_screen.dart';
 
 class WorkoutInProgressScreen extends StatefulWidget {
   const WorkoutInProgressScreen({super.key});
@@ -50,8 +52,8 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
       body: SafeArea(
         child: BlocConsumer<WorkoutSessionBloc, WorkoutSessionState>(
           listenWhen: (previous, current) =>
-              previous.shouldAutoAdvance != current.shouldAutoAdvance &&
-              current.shouldAutoAdvance,
+              previous.shouldAutoAdvance != current.shouldAutoAdvance ||
+              (!previous.isWorkoutFinished && current.isWorkoutFinished),
           listener: (context, state) {
             if (state.shouldAutoAdvance && !_isPageAnimating && state.nextIndex != null) {
               final targetIndex = state.nextIndex!;
@@ -76,8 +78,11 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                     curve: Curves.easeInOut,
                   ).then((_) {
                     _isPageAnimating = false;
-                    context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
-                    context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
+
+                    if (context.mounted) {
+                      context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
+                      context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
+                    }
                   });
                 }
               } else {
@@ -85,6 +90,73 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                 context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
                 context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
               }
+            }
+
+            // <-- Показываем BottomSheet при завершении
+            if (state.isWorkoutFinished) {
+              final completed = state.session!.exercises.where((e) => e.status == ExerciseStatus.done).length;
+              final total = state.session!.exercises.length;
+              final duration = state.session!.endTime!.difference(state.session!.startTime);
+
+              Future.delayed(const Duration(milliseconds: 500), () {
+                WidgetsBinding.instance.addPostFrameCallback((_) async {
+                  final result = await showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    backgroundColor: Colors.transparent,
+                    builder: (context) {
+                      return DraggableScrollableSheet(
+                        initialChildSize: 0.5,
+                        minChildSize: 0.2,
+                        maxChildSize: 0.9,
+                        builder: (context, scrollController) {
+                          return Container(
+                            decoration: BoxDecoration(
+                              color: Theme.of(context).scaffoldBackgroundColor,
+                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                            ),
+                            child: SingleChildScrollView(
+                              controller: scrollController,
+                              child: WorkoutSummaryBottomSheet(
+                                session: state.session!,
+                                completed: completed,
+                                total: total,
+                                duration: duration,
+                                onFinish: () {
+                                  Navigator.of(context).pop('finished');
+                                },
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+
+                  // ⏳ Подождали, пока bottom sheet закроется
+                  if (result == null || result == 'finished') {
+                    await Future.delayed(const Duration(milliseconds: 150)); // 👈 дать "мозгу" немного времени
+
+                    if (context.mounted) {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        PageRouteBuilder(
+                          transitionDuration: const Duration(milliseconds: 700),
+                          pageBuilder: (_, __, ___) => const HomeScreen(),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeOutCubic;
+
+                            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                            return SlideTransition(position: animation.drive(tween), child: child);
+                          },
+                        ),
+                        (route) => false,
+                      );
+                    }
+                  }
+                });
+              });
             }
           },
           builder: (context, state) {
@@ -155,7 +227,7 @@ class _Header extends StatelessWidget {
       children: [
         Text('Текущая цель: ${session.goal}', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        _WorkoutTimer(startTime: session.startTime),
+        _WorkoutTimer(startTime: session.startTime, endTime: session.endTime),
       ],
     );
   }
@@ -448,267 +520,6 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
     );
   }
 }
-
-// class _ExerciseCard extends StatefulWidget {
-//   final String exerciseId;
-//   final WorkoutMode workoutMode;
-//   final bool isResting;
-
-//   const _ExerciseCard({
-//     required this.exerciseId,
-//     required this.workoutMode,
-//     required this.isResting,
-//   });
-
-//   @override
-//   State<_ExerciseCard> createState() => _ExerciseCardState();
-// }
-
-// class _ExerciseCardState extends State<_ExerciseCard> {
-//   Exercise? _exercise;
-//   bool _isLoading = true;
-
-//   @override
-//   void initState() {
-//     super.initState();
-//     _loadExercise();
-//   }
-
-//   Future<void> _loadExercise() async {
-//     final exercise = await locator<ExerciseRepository>().getExerciseById(widget.exerciseId);
-//     if (mounted) {
-//       setState(() {
-//         _exercise = exercise;
-//         _isLoading = false;
-//       });
-//     }
-//   }
-
-//   void _showInstructions() {
-//     showModalBottomSheet(
-//       context: context,
-//       backgroundColor: Theme.of(context).colorScheme.surface,
-//       shape: const RoundedRectangleBorder(
-//         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-//       ),
-//       builder: (context) {
-//         final instructions = _exercise!.instructions;
-//         final images = _exercise!.imageUrls ?? [];
-
-//         return Padding(
-//           padding: const EdgeInsets.all(24),
-//           child: SingleChildScrollView(
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Text('Инструкция', style: Theme.of(context).textTheme.titleMedium),
-//                 const SizedBox(height: 12),
-//                 if (images.isNotEmpty)
-//                   SizedBox(
-//                     height: 200,
-//                     child: PageView.builder(
-//                       itemCount: images.length,
-//                       itemBuilder: (context, index) {
-//                         return Padding(
-//                           padding: const EdgeInsets.symmetric(horizontal: 4),
-//                           child: Image.network(
-//                             images[index],
-//                             fit: BoxFit.cover,
-//                             errorBuilder: (_, __, ___) => const Icon(Icons.broken_image),
-//                           ),
-//                         );
-//                       },
-//                     ),
-//                   ),
-//                 if (images.isNotEmpty) const SizedBox(height: 16),
-//                 if (instructions.isNotEmpty)
-//                   ...instructions.map(
-//                     (step) => Padding(
-//                       padding: const EdgeInsets.symmetric(vertical: 4),
-//                       child: Text('• $step', style: Theme.of(context).textTheme.bodyLarge),
-//                     ),
-//                   )
-//                 else
-//                   const Text('Инструкция недоступна'),
-//               ],
-//             ),
-//           ),
-//         );
-//       },
-//     );
-//   }
-
-//   @override
-//   Widget build(BuildContext context) {
-//     if (_isLoading) {
-//       return const SizedBox(
-//         height: 200,
-//         child: Center(child: SizedBox.shrink()),
-//       );
-//     }
-
-//     if (_exercise == null) {
-//       return const Center(child: Text('Упражнение не найдено'));
-//     }
-
-//     final sets = widget.workoutMode.sets;
-//     final reps = widget.workoutMode.reps;
-//     final rest = widget.workoutMode.restSeconds;
-//     // final image = _exercise!.imageUrls?.isNotEmpty == true ? _exercise!.imageUrls!.first : null;
-
-//     return Card(
-//       elevation: 6,
-//       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-//       clipBehavior: Clip.antiAlias,
-//       child: Column(
-//         crossAxisAlignment: CrossAxisAlignment.start,
-//         children: [
-//           // if (image != null)
-//           //   SizedBox(
-//           //     width: double.infinity,
-//           //     height: 180,
-//           //     child: Image.network(image, fit: BoxFit.cover),
-//           //   ),
-//           Padding(
-//             padding: const EdgeInsets.all(20),
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 Row(
-//                   children: [
-//                     Expanded(
-//                       child: Text(
-//                         _exercise!.name,
-//                         style: Theme.of(context).textTheme.titleLarge,
-//                       ),
-//                     ),
-//                     IconButton(
-//                       icon: const Icon(Icons.help_outline),
-//                       tooltip: 'Инструкция',
-//                       onPressed: _showInstructions,
-//                     ),
-//                   ],
-//                 ),
-//                 if (_exercise!.description != null)
-//                   Padding(
-//                     padding: const EdgeInsets.only(top: 4.0, bottom: 12),
-//                     child: Text(
-//                       _exercise!.description!,
-//                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
-//                     ),
-//                   ),
-//                 if (_exercise!.primaryMuscles.isNotEmpty == true || _exercise!.secondaryMuscles?.isNotEmpty == true)
-//                   Column(
-//                     crossAxisAlignment: CrossAxisAlignment.start,
-//                     children: [
-//                       if (_exercise!.primaryMuscles.isNotEmpty == true) ...[
-//                         Row(
-//                           children: [
-//                             const Icon(Icons.star, size: 18, color: Colors.deepOrange),
-//                             const SizedBox(width: 6),
-//                             Text('Основные мышцы', style: Theme.of(context).textTheme.labelLarge),
-//                           ],
-//                         ),
-//                         const SizedBox(height: 4),
-//                         Wrap(
-//                           spacing: 8,
-//                           runSpacing: 4,
-//                           children: _exercise!.primaryMuscles.map(
-//                             (muscle) => Chip(
-//                               label: Text(
-//                                 muscle,
-//                                 style: const TextStyle(fontWeight: FontWeight.bold),
-//                               ),
-//                               backgroundColor: Colors.transparent,
-//                               shape: const StadiumBorder(
-//                                 side: BorderSide(
-//                                   color: Colors.deepOrange,
-//                                   width: 1,
-//                                 ),
-//                               ),
-//                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-//                               elevation: 0,
-//                               clipBehavior: Clip.antiAlias,
-//                             )
-//                           ).toList(),
-//                         ),
-//                         const SizedBox(height: 16),
-//                       ],
-//                       if (_exercise!.secondaryMuscles?.isNotEmpty == true) ...[
-//                         Row(
-//                           children: [
-//                             const Icon(Icons.fitness_center, size: 18, color: Colors.blueGrey),
-//                             const SizedBox(width: 6),
-//                             Text('Второстепенные мышцы', style: Theme.of(context).textTheme.labelLarge),
-//                           ],
-//                         ),
-//                         const SizedBox(height: 4),
-//                         Wrap(
-//                           spacing: 8,
-//                           runSpacing: 4,
-//                           children: _exercise!.secondaryMuscles!.map(
-//                             (muscle) => Chip(
-//                               label: Text(muscle),
-//                               backgroundColor: Colors.transparent,
-//                               shape: const StadiumBorder(
-//                                 side: BorderSide(
-//                                   color: Colors.grey,
-//                                   width: 1,
-//                                 ),
-//                               ),
-//                               materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-//                               elevation: 0,
-//                               clipBehavior: Clip.antiAlias,
-//                             )
-//                           ).toList(),
-//                         ),
-//                         const SizedBox(height: 12),
-//                       ],
-//                     ],
-//                   ),
-//                 Row(
-//                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//                   children: [
-//                     _InfoItem(icon: Icons.fitness_center, label: '$sets подходов'),
-//                     _InfoItem(icon: Icons.repeat, label: '$reps повторов'),
-//                     _InfoItem(icon: Icons.timer, label: '$rest сек отдыха'),
-//                   ],
-//                 ),
-//               ],
-//             ),
-//           ),
-
-//           // Нижняя часть с таймером (заполняет всё оставшееся место)
-//           Expanded(
-//             child: Center(
-//               child: AnimatedSwitcher(
-//                 duration: const Duration(milliseconds: 400),
-//                 switchInCurve: Curves.easeOut,
-//                 switchOutCurve: Curves.easeIn,
-//                 transitionBuilder: (child, animation) {
-//                   return FadeTransition(
-//                     opacity: animation,
-//                     child: ScaleTransition(
-//                       scale: animation,
-//                       child: child,
-//                     ),
-//                   );
-//                 },
-//                 child: widget.isResting
-//                     ? Align(
-//                         key: ValueKey('resting_timer'), // обязательный ключ для AnimatedSwitcher
-//                         alignment: Alignment.center,
-//                         child: _RestingTimer(totalSets: sets),
-//                       )
-//                     : const SizedBox.shrink(key: ValueKey('empty')), // обязательный ключ
-//               ),
-//             ),
-//           ),
-//         ],
-//       ),
-//     );
-//   }
-// }
 
 class _InfoItem extends StatelessWidget {
   final IconData icon;
@@ -1024,7 +835,8 @@ class _ProgressIndicator extends StatelessWidget {
 
 class _WorkoutTimer extends StatefulWidget {
   final DateTime startTime;
-  const _WorkoutTimer({required this.startTime});
+  final DateTime? endTime;
+  const _WorkoutTimer({required this.startTime, required this.endTime});
 
   @override
   State<_WorkoutTimer> createState() => _WorkoutTimerState();
@@ -1038,7 +850,7 @@ class _WorkoutTimerState extends State<_WorkoutTimer> {
     super.initState();
     // Таймер только для обновления UI каждую секунду
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
-      if (mounted) setState(() {});
+      if (widget.endTime == null && mounted) setState(() {});
     });
   }
 
@@ -1048,7 +860,10 @@ class _WorkoutTimerState extends State<_WorkoutTimer> {
     super.dispose();
   }
 
-  Duration get _duration => DateTime.now().difference(widget.startTime);
+  Duration get _duration {
+    final now = widget.endTime ?? DateTime.now();
+    return now.difference(widget.startTime);
+  }
 
   @override
   Widget build(BuildContext context) {

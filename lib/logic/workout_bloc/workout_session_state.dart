@@ -10,6 +10,7 @@ class WorkoutSessionState {
   final DateTime? restStartTime;
   final bool shouldAutoAdvance;
   final int? nextIndex;
+  final bool isWorkoutFinished;
   //final Duration? restTimer; // оставшееся время отдыха (если есть)
 
   bool get isActive => session != null;
@@ -24,6 +25,7 @@ class WorkoutSessionState {
     this.restStartTime,
     this.shouldAutoAdvance = false,
     this.nextIndex,
+    this.isWorkoutFinished = false,
     //this.restTimer,
   });
 
@@ -37,6 +39,7 @@ class WorkoutSessionState {
     DateTime? restStartTime,
     bool? shouldAutoAdvance,
     int? nextIndex,
+    bool? isWorkoutFinished,
     //Duration? restTimer,
   }) {
     return WorkoutSessionState(
@@ -49,6 +52,7 @@ class WorkoutSessionState {
       restStartTime: restStartTime ?? this.restStartTime,
       shouldAutoAdvance: shouldAutoAdvance ?? this.shouldAutoAdvance,
       nextIndex: nextIndex ?? this.nextIndex,
+      isWorkoutFinished: isWorkoutFinished ?? this.isWorkoutFinished,
       //restTimer: restTimer ?? this.restTimer,
     );
   }
