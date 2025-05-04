@@ -18,10 +18,15 @@ import '../../../logic/auth_bloc/auth_bloc.dart';
 import '../../../logic/auth_bloc/auth_event.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final bool showReminderBanner;
+
+  const HomeScreen({
+    super.key,
+    this.showReminderBanner = false,
+  });
 
   @override
-  _HomeScreenState createState() => _HomeScreenState();
+  State<HomeScreen> createState() => _HomeScreenState();
 }
 
 class _HomeScreenState extends State<HomeScreen> {
@@ -33,12 +38,25 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
+
     _screens = [
       WorkoutScreen(),
       NutritionScreen(),
       ProgressScreen(),
       ProfileScreen(),
     ];
+
+    // 👇 Показываем SnackBar, если нужно напомнить
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.showReminderBanner) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Вы не завершили тренировку до конца 🧐'),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    });
   }
 
   void _onItemTapped(int index) {

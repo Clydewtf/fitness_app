@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -105,55 +106,40 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                     isScrollControlled: true,
                     backgroundColor: Colors.transparent,
                     builder: (context) {
-                      return DraggableScrollableSheet(
-                        initialChildSize: 0.5,
-                        minChildSize: 0.2,
-                        maxChildSize: 0.9,
-                        builder: (context, scrollController) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              color: Theme.of(context).scaffoldBackgroundColor,
-                              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-                            ),
-                            child: SingleChildScrollView(
-                              controller: scrollController,
-                              child: WorkoutSummaryBottomSheet(
-                                session: state.session!,
-                                completed: completed,
-                                total: total,
-                                duration: duration,
-                                onFinish: () {
-                                  Navigator.of(context).pop('finished');
-                                },
-                              ),
-                            ),
-                          );
+                      return WorkoutSummaryBottomSheet(
+                        session: state.session!,
+                        completed: completed,
+                        total: total,
+                        duration: duration,
+                        onFinished: ({required int difficulty, required String mood, String? comment, File? photo}) {
+                          // handle finish
                         },
                       );
                     },
                   );
 
-                  // ⏳ Подождали, пока bottom sheet закроется
-                  if (result == null || result == 'finished') {
-                    await Future.delayed(const Duration(milliseconds: 150)); // 👈 дать "мозгу" немного времени
+                  await Future.delayed(const Duration(milliseconds: 150));
 
-                    if (context.mounted) {
-                      Navigator.of(context).pushAndRemoveUntil(
-                        PageRouteBuilder(
-                          transitionDuration: const Duration(milliseconds: 700),
-                          pageBuilder: (_, __, ___) => const HomeScreen(),
-                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                            const begin = Offset(0.0, 1.0);
-                            const end = Offset.zero;
-                            const curve = Curves.easeOutCubic;
+                  if (context.mounted) {
+                    final shouldShowReminderBanner = result != true;
 
-                            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                            return SlideTransition(position: animation.drive(tween), child: child);
-                          },
+                    Navigator.of(context).pushAndRemoveUntil(
+                      PageRouteBuilder(
+                        transitionDuration: const Duration(milliseconds: 700),
+                        pageBuilder: (_, __, ___) => HomeScreen(
+                          showReminderBanner: shouldShowReminderBanner,
                         ),
-                        (route) => false,
-                      );
-                    }
+                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                          const begin = Offset(0.0, 1.0);
+                          const end = Offset.zero;
+                          const curve = Curves.easeOutCubic;
+
+                          final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                          return SlideTransition(position: animation.drive(tween), child: child);
+                        },
+                      ),
+                      (route) => false,
+                    );
                   }
                 });
               });
@@ -181,6 +167,7 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                         exercises: exercises,
                         currentIndex: state.currentExerciseIndex,
                       ),
+                      // TODO: нажимаем на кружок - кидает на эту страницу
                       const SizedBox(height: 20),
                       Expanded(
                         child: PageView.builder(
