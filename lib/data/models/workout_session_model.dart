@@ -2,6 +2,7 @@ import 'workout_model.dart';
 
 class WorkoutSession {
   final String workoutId;
+  final String workoutName;
   final String goal;
   final List<WorkoutExerciseProgress> exercises;
   final DateTime startTime;
@@ -9,15 +10,12 @@ class WorkoutSession {
 
   WorkoutSession({
     required this.workoutId,
+    required this.workoutName,
     required this.goal,
     required this.exercises,
     required this.startTime,
     this.endTime,
   });
-
-  // Duration get duration => endTime != null
-  //     ? endTime!.difference(startTime)
-  //     : DateTime.now().difference(startTime);
 
   bool get isCompleted => exercises.every((e) => e.status == ExerciseStatus.done);
 }
@@ -41,6 +39,7 @@ class WorkoutExerciseProgress {
 extension WorkoutSessionCopyWith on WorkoutSession {
   WorkoutSession copyWith({
     String? workoutId,
+    String? workoutName,
     String? goal,
     List<WorkoutExerciseProgress>? exercises,
     DateTime? startTime,
@@ -48,6 +47,7 @@ extension WorkoutSessionCopyWith on WorkoutSession {
   }) {
     return WorkoutSession(
       workoutId: workoutId ?? this.workoutId,
+      workoutName: workoutName ?? this.workoutName,
       goal: goal ?? this.goal,
       exercises: exercises ?? this.exercises,
       startTime: startTime ?? this.startTime,

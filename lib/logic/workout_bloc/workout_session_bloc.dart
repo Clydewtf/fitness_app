@@ -57,6 +57,7 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
 
     final session = WorkoutSession(
       workoutId: event.workout.id,
+      workoutName: event.workout.name,
       goal: goal,
       exercises: progressList,
       startTime: DateTime.now(),
@@ -83,44 +84,6 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
       //restTimer: null,
     ));
   }
-  
-  // void _onCompleteSet(CompleteSet event, Emitter emit) {
-  //   final session = state.session!;
-  //   final exercises = List<WorkoutExerciseProgress>.from(session.exercises);
-  //   final currentExercise = exercises[state.currentExerciseIndex];
-  //   final setsRequired = currentExercise.workoutMode.sets; // сколько всего подходов
-
-  //   final nextSetIndex = state.currentSetIndex + 1;
-
-  //   if (nextSetIndex >= setsRequired) {
-  //     // Все подходы сделаны → завершить упражнение
-  //     exercises[state.currentExerciseIndex] = currentExercise.copyWith(
-  //       status: ExerciseStatus.done,
-  //     );
-
-  //     final nextIndex = findNextIncompleteExercise(exercises, state.currentExerciseIndex);
-
-  //     emit(state.copyWith(
-  //       session: session.copyWith(exercises: exercises),
-  //       //currentExerciseIndex: nextIndex ?? exercises.length,
-  //       currentSetIndex: 0,
-  //       isResting: false,
-  //       restSecondsLeft: null,
-  //       shouldAutoAdvance: nextIndex != null,
-  //       nextIndex: nextIndex,
-  //     ));
-  //   } else {
-  //     emit(state.copyWith(
-  //       currentSetIndex: nextSetIndex,
-  //       isResting: true,
-  //       restSecondsLeft: currentExercise.workoutMode.restSeconds,
-  //       restDurationSeconds: currentExercise.workoutMode.restSeconds,
-  //       restStartTime: DateTime.now(),
-  //     ));
-
-  //     Future.microtask(_startRestTimer);
-  //   }
-  // }
 
   void _onCompleteSet(CompleteSet event, Emitter emit) {
     final session = state.session!;
@@ -202,22 +165,91 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
     final session = state.session!;
     final exercises = List<WorkoutExerciseProgress>.from(session.exercises);
 
+    // Обновляем статус упражнения на skipped
     exercises[event.index] = exercises[event.index].copyWith(
       status: ExerciseStatus.skipped,
     );
 
+    // Пытаемся найти следующее упражнение
     final nextIndex = findNextIncompleteExercise(exercises, event.index);
 
+    // Проверяем, все ли упражнения скипнуты
+    final allSkipped = exercises.every((e) => e.status == ExerciseStatus.skipped);
+    final hasAnyCompleted = exercises.any((e) => e.status == ExerciseStatus.done);
+
+    if (nextIndex == null) {
+      if (allSkipped) {
+        final updatedSession = session.copyWith(
+          exercises: exercises,
+        );
+
+        // ВАЖНО: сначала применить session с новыми упражнениями, потом его обнулить
+        emit(state.copyWith(
+          session: updatedSession,
+        ));
+
+        // Все упражнения были скипнуты → просто сбрасываем сессию
+        emit(state.copyWith(
+          session: null,
+          nextIndex: null,
+          currentSetIndex: 0,
+          isResting: false,
+          restSecondsLeft: null,
+          shouldAutoAdvance: false,
+          isWorkoutFinished: false,
+          isWorkoutAborted: true,
+        ));
+        return;
+      } else if (hasAnyCompleted) {
+        // Некоторые упражнения завершены → завершаем тренировку
+        final finishedSession = session.copyWith(
+          exercises: exercises,
+          endTime: DateTime.now(),
+        );
+        emit(state.copyWith(
+          session: finishedSession,
+          isWorkoutFinished: true,
+          currentSetIndex: 0,
+          isResting: false,
+          restSecondsLeft: null,
+          shouldAutoAdvance: false,
+          nextIndex: null,
+        ));
+      }
+      return;
+    }
+
+    // Есть следующее упражнение — просто двигаемся к нему
     emit(state.copyWith(
       session: session.copyWith(exercises: exercises),
-      //currentExerciseIndex: nextIndex ?? exercises.length,
       currentSetIndex: 0,
       isResting: false,
       restSecondsLeft: null,
-      shouldAutoAdvance: nextIndex != null,
+      shouldAutoAdvance: true,
       nextIndex: nextIndex,
     ));
   }
+
+  // void _onSkipExercise(SkipExercise event, Emitter emit) {
+  //   final session = state.session!;
+  //   final exercises = List<WorkoutExerciseProgress>.from(session.exercises);
+
+  //   exercises[event.index] = exercises[event.index].copyWith(
+  //     status: ExerciseStatus.skipped,
+  //   );
+
+  //   final nextIndex = findNextIncompleteExercise(exercises, event.index);
+
+  //   emit(state.copyWith(
+  //     session: session.copyWith(exercises: exercises),
+  //     //currentExerciseIndex: nextIndex ?? exercises.length,
+  //     currentSetIndex: 0,
+  //     isResting: false,
+  //     restSecondsLeft: null,
+  //     shouldAutoAdvance: nextIndex != null,
+  //     nextIndex: nextIndex,
+  //   ));
+  // }
 
   void _onFinishSession(FinishWorkoutSession event, Emitter emit) {
     final session = state.session!;

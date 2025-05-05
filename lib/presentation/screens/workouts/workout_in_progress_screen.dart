@@ -6,12 +6,15 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/locator.dart';
 import '../../../core/utils.dart';
 import '../../../data/models/exercise_model.dart';
+import '../../../data/models/workout_log_model.dart';
 import '../../../data/models/workout_model.dart';
 import '../../../data/repositories/exercise_repository.dart';
+import '../../../data/repositories/workout_log_repository.dart';
 import '../../../logic/workout_bloc/workout_session_bloc.dart';
 import '../../../data/models/workout_session_model.dart';
 import '../../../logic/workout_bloc/workout_session_event.dart';
 import '../../../logic/workout_bloc/workout_session_state.dart';
+import '../../../services/auth_service.dart';
 import '../../widgets/workouts/workout_summary_bottom_sheet.dart';
 import '../home/home_screen.dart';
 
@@ -54,7 +57,8 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
         child: BlocConsumer<WorkoutSessionBloc, WorkoutSessionState>(
           listenWhen: (previous, current) =>
               previous.shouldAutoAdvance != current.shouldAutoAdvance ||
-              (!previous.isWorkoutFinished && current.isWorkoutFinished),
+              (!previous.isWorkoutFinished && current.isWorkoutFinished) ||
+              (!previous.isWorkoutAborted && current.isWorkoutAborted),
           listener: (context, state) {
             if (state.shouldAutoAdvance && !_isPageAnimating && state.nextIndex != null) {
               final targetIndex = state.nextIndex!;
@@ -98,6 +102,8 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
               final completed = state.session!.exercises.where((e) => e.status == ExerciseStatus.done).length;
               final total = state.session!.exercises.length;
               final duration = state.session!.endTime!.difference(state.session!.startTime);
+              final workoutLogRepository = locator<WorkoutLogRepository>();
+              final authService = locator<AuthService>();
 
               Future.delayed(const Duration(milliseconds: 500), () {
                 WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -111,8 +117,40 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                         completed: completed,
                         total: total,
                         duration: duration,
-                        onFinished: ({required int difficulty, required String mood, String? comment, File? photo}) {
-                          // handle finish
+                        onFinished: ({
+                          required int difficulty,
+                          required String mood,
+                          String? comment,
+                          File? photo,
+                        }) async {
+                          final uid = authService.getCurrentUser()?.uid;
+                          if (uid == null) return;
+                          final logId = '${state.session!.workoutId}_${DateTime.now().toIso8601String()}';
+
+                          final log = WorkoutLog(
+                            id: logId,
+                            userId: uid,
+                            workoutId: state.session!.workoutId,
+                            workoutName: state.session!.workoutName,
+                            goal: state.session!.goal,
+                            date: DateTime.now(),
+                            durationMinutes: duration.inMinutes,
+                            difficulty: difficulty,
+                            mood: mood,
+                            comment: comment,
+                            photoPath: photo?.path,
+                            exercises: state.session!.exercises.map((e) {
+                              return ExerciseLog(
+                                id: e.exerciseId,
+                                sets: e.workoutMode.sets,
+                                reps: e.workoutMode.reps,
+                                restSeconds: e.workoutMode.restSeconds,
+                                status: e.status,
+                              );
+                            }).toList(),
+                          );
+
+                          await workoutLogRepository.saveWorkoutLog(log);
                         },
                       );
                     },
@@ -143,6 +181,26 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                   }
                 });
               });
+            }
+            
+            // Если сессия обнулилась (все скипнули) → просто выходим
+            if (state.isWorkoutAborted) {
+              if (context.mounted) {
+                Navigator.of(context).pushAndRemoveUntil(
+                  PageRouteBuilder(
+                    transitionDuration: const Duration(milliseconds: 700),
+                    pageBuilder: (_, __, ___) => const HomeScreen(),
+                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                      const begin = Offset(0.0, 1.0);
+                      const end = Offset.zero;
+                      const curve = Curves.easeOutCubic;
+                      final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                      return SlideTransition(position: animation.drive(tween), child: child);
+                    },
+                  ),
+                  (route) => false,
+                );
+              }
             }
           },
           builder: (context, state) {
@@ -190,7 +248,7 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                         ),
                       ),
                       const SizedBox(height: 20),
-                      SafeArea(child: _ActionButtons()), // Кнопки всегда снизу, с отступом
+                      SafeArea(child: _ActionButtons()),
                     ],
                   ),
                 ],
