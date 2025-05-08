@@ -1,5 +1,7 @@
 import 'workout_model.dart';
 
+enum WorkoutStatus { initial, inProgress, completed }
+
 class WorkoutSession {
   final String workoutId;
   final String workoutName;
@@ -7,6 +9,7 @@ class WorkoutSession {
   final List<WorkoutExerciseProgress> exercises;
   final DateTime startTime;
   DateTime? endTime;
+  WorkoutStatus status;
 
   WorkoutSession({
     required this.workoutId,
@@ -15,6 +18,7 @@ class WorkoutSession {
     required this.exercises,
     required this.startTime,
     this.endTime,
+    this.status = WorkoutStatus.inProgress,
   });
 
   bool get isCompleted => exercises.every((e) => e.status == ExerciseStatus.done);
@@ -44,6 +48,7 @@ extension WorkoutSessionCopyWith on WorkoutSession {
     List<WorkoutExerciseProgress>? exercises,
     DateTime? startTime,
     DateTime? endTime,
+    WorkoutStatus? status,
   }) {
     return WorkoutSession(
       workoutId: workoutId ?? this.workoutId,
@@ -52,6 +57,7 @@ extension WorkoutSessionCopyWith on WorkoutSession {
       exercises: exercises ?? this.exercises,
       startTime: startTime ?? this.startTime,
       endTime: endTime ?? this.endTime,
+      status: status ?? this.status,
     );
   }
 }

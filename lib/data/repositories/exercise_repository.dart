@@ -19,8 +19,43 @@ class ExerciseRepository {
         return Exercise.fromMap(doc.data()!, doc.id);
       }
     } catch (e) {
-      print("Ошибка при загрузке упражнения $id: $e");
+      if (kDebugMode) {
+        print("Ошибка при загрузке упражнения $id: $e");
+      }
     }
     return null;
+  }
+
+  Future<List<Exercise>> getExercisesByIds(List<String> ids) async {
+    final List<Exercise> exercises = [];
+
+    try {
+      // Firestore ограничивает whereIn до 10 элементов — разобьём, если надо
+      const batchSize = 10;
+      for (var i = 0; i < ids.length; i += batchSize) {
+        final batchIds = ids.sublist(i, i + batchSize > ids.length ? ids.length : i + batchSize);
+
+        final querySnapshot = await _firestore
+            .collection('exercises')
+            .where(FieldPath.documentId, whereIn: batchIds)
+            .get();
+
+        for (final doc in querySnapshot.docs) {
+          try {
+            exercises.add(Exercise.fromMap(doc.data(), doc.id));
+          } catch (e) {
+            if (kDebugMode) {
+              print("Ошибка при парсинге упражнения ${doc.id}: $e");
+            }
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print("Ошибка при загрузке упражнений: $e");
+      }
+    }
+
+    return exercises;
   }
 }

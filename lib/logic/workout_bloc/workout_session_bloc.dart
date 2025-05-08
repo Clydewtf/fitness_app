@@ -1,12 +1,14 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../core/locator.dart';
 import '../../core/utils.dart';
 import '../../data/models/workout_session_model.dart';
+import '../../data/repositories/exercise_repository.dart';
 import 'workout_session_event.dart';
 import 'workout_session_state.dart';
 
 class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> {
-  Timer? _restTimer; // <-- сюда сохраним активный таймер
+  Timer? _restTimer;
 
   WorkoutSessionBloc() : super(const WorkoutSessionState()) {
     on<StartWorkoutSession>(_onStartSession);
@@ -43,11 +45,35 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
     emit(state.copyWith(currentExerciseIndex: event.index));
   }
 
-  void _onStartSession(StartWorkoutSession event, Emitter emit) {
+  // void _onStartSession(StartWorkoutSession event, Emitter emit) {
+  //   final goal = event.goal;
+
+  //   final progressList = event.workout.exercises
+  //       .where((e) => e.modes.containsKey(goal))
+  //       .map((e) => WorkoutExerciseProgress(
+  //             exerciseId: e.exerciseId,
+  //             workoutMode: e.modes[goal]!,
+  //             status: ExerciseStatus.pending,
+  //           ))
+  //       .toList();
+
+  //   final session = WorkoutSession(
+  //     workoutId: event.workout.id,
+  //     workoutName: event.workout.name,
+  //     goal: goal,
+  //     exercises: progressList,
+  //     startTime: DateTime.now(),
+  //     status: WorkoutStatus.inProgress,
+  //   );
+
+  //   emit(state.copyWith(session: session, currentExerciseIndex: 0));
+  // }
+
+  Future<void> _onStartSession(StartWorkoutSession event, Emitter emit) async {
     final goal = event.goal;
 
     final progressList = event.workout.exercises
-        .where((e) => e.modes.containsKey(goal)) // берём упражнения с нужной целью
+        .where((e) => e.modes.containsKey(goal))
         .map((e) => WorkoutExerciseProgress(
               exerciseId: e.exerciseId,
               workoutMode: e.modes[goal]!,
@@ -61,9 +87,22 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
       goal: goal,
       exercises: progressList,
       startTime: DateTime.now(),
+      status: WorkoutStatus.inProgress,
     );
 
-    emit(state.copyWith(session: session, currentExerciseIndex: 0));
+    // Загружаем все упражнения по ID
+    final exerciseIds = progressList.map((e) => e.exerciseId).toSet().toList();
+    final exercises = await locator<ExerciseRepository>().getExercisesByIds(exerciseIds);
+
+    final exerciseMap = {
+      for (final e in exercises) e.id: e,
+    };
+
+    emit(state.copyWith(
+      session: session,
+      currentExerciseIndex: 0,
+      exercisesById: exerciseMap,
+    ));
   }
 
   void _onStartExercise(StartExercise event, Emitter emit) {
@@ -106,6 +145,7 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
         final finishedSession = session.copyWith(
           exercises: exercises,
           endTime: DateTime.now(),
+          status: WorkoutStatus.completed,
         );
         emit(state.copyWith(
           session: finishedSession,
@@ -181,6 +221,7 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
       if (allSkipped) {
         final updatedSession = session.copyWith(
           exercises: exercises,
+          status: WorkoutStatus.completed,
         );
 
         // ВАЖНО: сначала применить session с новыми упражнениями, потом его обнулить
@@ -205,6 +246,7 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
         final finishedSession = session.copyWith(
           exercises: exercises,
           endTime: DateTime.now(),
+          status: WorkoutStatus.completed,
         );
         emit(state.copyWith(
           session: finishedSession,
@@ -230,30 +272,10 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
     ));
   }
 
-  // void _onSkipExercise(SkipExercise event, Emitter emit) {
-  //   final session = state.session!;
-  //   final exercises = List<WorkoutExerciseProgress>.from(session.exercises);
-
-  //   exercises[event.index] = exercises[event.index].copyWith(
-  //     status: ExerciseStatus.skipped,
-  //   );
-
-  //   final nextIndex = findNextIncompleteExercise(exercises, event.index);
-
-  //   emit(state.copyWith(
-  //     session: session.copyWith(exercises: exercises),
-  //     //currentExerciseIndex: nextIndex ?? exercises.length,
-  //     currentSetIndex: 0,
-  //     isResting: false,
-  //     restSecondsLeft: null,
-  //     shouldAutoAdvance: nextIndex != null,
-  //     nextIndex: nextIndex,
-  //   ));
-  // }
-
   void _onFinishSession(FinishWorkoutSession event, Emitter emit) {
     final session = state.session!;
     session.endTime = DateTime.now();
+    session.status = WorkoutStatus.completed;
     emit(state.copyWith(session: session, isWorkoutFinished: true));
   }
 
@@ -287,22 +309,4 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
       ));
     }
   }
-
-  // void _onRestTick(RestTick event, Emitter emit) {
-  //   if (state.restSecondsLeft == null) return;
-
-  //   final secondsLeft = state.restSecondsLeft! - 1;
-
-  //   if (secondsLeft <= 0) {
-  //     _restTimer?.cancel();
-  //     emit(state.copyWith(
-  //       isResting: false,
-  //       restSecondsLeft: null,
-  //     ));
-  //   } else {
-  //     emit(state.copyWith(
-  //       restSecondsLeft: secondsLeft,
-  //     ));
-  //   }
-  // }
 }

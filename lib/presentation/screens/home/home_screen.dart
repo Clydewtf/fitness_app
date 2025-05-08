@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../core/locator.dart';
+import '../../../data/models/workout_session_model.dart';
 import '../../../data/repositories/my_workout_repository.dart';
 import '../../../data/repositories/workout_repository.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
@@ -7,7 +8,10 @@ import '../../../logic/workout_bloc/my_workout_bloc.dart';
 import '../../../logic/workout_bloc/my_workout_event.dart';
 import '../../../logic/workout_bloc/workout_bloc.dart';
 import '../../../logic/workout_bloc/workout_event.dart';
+import '../../../logic/workout_bloc/workout_session_bloc.dart';
+import '../../../logic/workout_bloc/workout_session_state.dart';
 import '../../../services/user_service.dart';
+import '../../widgets/workouts/workout_session_mini_player.dart';
 import '../workouts/workout_screen.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../progress/progress_screen.dart';
@@ -31,6 +35,8 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
+  final GlobalKey _navBarKey = GlobalKey();
+  double _navBarHeight = 80;
 
   // Список экранов
   late final List<Widget> _screens;
@@ -55,6 +61,15 @@ class _HomeScreenState extends State<HomeScreen> {
             duration: Duration(seconds: 3),
           ),
         );
+      }
+    });
+    // TODO: доделать логику с дозаполнением настроения и прочего после тренировки для сохранения
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final renderBox = _navBarKey.currentContext?.findRenderObject() as RenderBox?;
+      if (renderBox != null) {
+        setState(() {
+          _navBarHeight = renderBox.size.height;
+        });
       }
     });
   }
@@ -89,7 +104,11 @@ class _HomeScreenState extends State<HomeScreen> {
             locator.get<MyWorkoutRepository>(),
           )..add(LoadMyWorkouts(authState.user.uid)),
         ),
+        BlocProvider(
+          create: (_) => WorkoutSessionBloc(),
+        ),
       ],
+// TODO: сделать, чтобы мини-плеер сохранялся при закрытии приложения (или вообще сделать чтобы полностью всё состояние сохранялось)
       child: Scaffold(
         appBar: AppBar(),
         body: Stack(
@@ -100,6 +119,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Align(
               alignment: Alignment.bottomCenter,
               child: Container(
+                key: _navBarKey,
                 decoration: BoxDecoration(
                   color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
                   borderRadius: const BorderRadius.only(
@@ -141,6 +161,31 @@ class _HomeScreenState extends State<HomeScreen> {
                 elevation: 8,
                 child: const Icon(Icons.add, size: 35, color: Colors.white),
               ),
+            ),
+
+            // Плеер
+            BlocBuilder<WorkoutSessionBloc, WorkoutSessionState>(
+              builder: (context, state) {
+                final session = state.session;
+                final index = state.currentExerciseIndex;
+
+                if (session == null || session.status != WorkoutStatus.inProgress) {
+                  return const SizedBox.shrink();
+                }
+
+                return Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: _navBarHeight + 10,
+                  child: WorkoutSessionMiniPlayer(
+                    session: session,
+                    currentExercise: index,
+                    isResting: state.isResting,
+                    restSecondsLeft: state.restSecondsLeft ?? 0,
+                    navBarHeight: _navBarHeight,
+                  ),
+                );
+              },
             ),
           ],
         ),

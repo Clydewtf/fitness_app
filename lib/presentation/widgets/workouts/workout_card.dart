@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/locator.dart';
+import '../../../data/models/workout_session_model.dart';
 import '../../../data/repositories/exercise_repository.dart';
 import '../../../data/repositories/workout_repository.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
@@ -219,6 +220,28 @@ class WorkoutCard extends StatelessWidget {
   }
 
   void _handleStartPressed(BuildContext context) {
+    final sessionBloc = context.read<WorkoutSessionBloc>();
+    final sessionState = sessionBloc.state;
+
+    // Если уже идёт тренировка — выводим диалог
+    if (sessionState.session?.status == WorkoutStatus.inProgress) {
+      showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text('Активная тренировка'),
+          content: const Text('У вас уже идёт тренировка. Завершите её перед началом новой.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('ОК'),
+            ),
+          ],
+        ),
+      );
+      return;
+    }
+
+    // Если тренировка не активна — продолжаем запуск
     if (workout.targetGoals.length <= 1) {
       final goal = workout.targetGoals.first;
       _navigateToSessionScreen(context, goal);
@@ -248,10 +271,14 @@ class WorkoutCard extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => BlocProvider(
-          create: (_) => WorkoutSessionBloc()..add(StartWorkoutSession(workout, goal)),
-          child: const WorkoutInProgressScreen(),
-        ),
+        builder: (_) {
+          final bloc = context.read<WorkoutSessionBloc>();
+          bloc.add(StartWorkoutSession(workout, goal));
+          return BlocProvider.value(
+            value: bloc,
+            child: const WorkoutInProgressScreen(),
+          );
+        },
       ),
     );
   }

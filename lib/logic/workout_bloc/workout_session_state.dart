@@ -1,10 +1,12 @@
+import '../../data/models/exercise_model.dart';
 import '../../data/models/workout_session_model.dart';
 
 class WorkoutSessionState {
   final WorkoutSession? session;
+  final Map<String, Exercise> exercisesById;
   final int currentExerciseIndex;
   final int currentSetIndex; // индекс подхода (0 = первый)
-  final bool isResting; // идет ли сейчас отдых
+  final bool isResting;
   final int? restSecondsLeft;
   final int? restDurationSeconds;
   final DateTime? restStartTime;
@@ -18,6 +20,7 @@ class WorkoutSessionState {
 
   const WorkoutSessionState({
     this.session,
+    this.exercisesById = const {},
     this.currentExerciseIndex = 0,
     this.currentSetIndex = 0,
     this.isResting = false,
@@ -33,6 +36,7 @@ class WorkoutSessionState {
 
   WorkoutSessionState copyWith({
     WorkoutSession? session,
+    Map<String, Exercise>? exercisesById,
     int? currentExerciseIndex,
     int? currentSetIndex,
     bool? isResting,
@@ -47,6 +51,7 @@ class WorkoutSessionState {
   }) {
     return WorkoutSessionState(
       session: session ?? this.session,
+      exercisesById: exercisesById ?? this.exercisesById,
       currentExerciseIndex: currentExerciseIndex ?? this.currentExerciseIndex,
       currentSetIndex: currentSetIndex ?? this.currentSetIndex,
       isResting: isResting ?? this.isResting,

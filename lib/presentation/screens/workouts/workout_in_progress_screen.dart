@@ -31,7 +31,9 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
   @override
   void initState() {
     super.initState();
-    _pageController = PageController();
+
+    final currentIndex = context.read<WorkoutSessionBloc>().state.currentExerciseIndex;
+    _pageController = PageController(initialPage: currentIndex);
   }
 
   @override
@@ -51,210 +53,214 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      body: SafeArea(
-        child: BlocConsumer<WorkoutSessionBloc, WorkoutSessionState>(
-          listenWhen: (previous, current) =>
-              previous.shouldAutoAdvance != current.shouldAutoAdvance ||
-              (!previous.isWorkoutFinished && current.isWorkoutFinished) ||
-              (!previous.isWorkoutAborted && current.isWorkoutAborted),
-          listener: (context, state) {
-            if (state.shouldAutoAdvance && !_isPageAnimating && state.nextIndex != null) {
-              final targetIndex = state.nextIndex!;
-              final currentIndex = state.currentExerciseIndex;
-              // TODO: потом сделать чтобы при листании на последнем, кидало с анимкой на первый (фейк страницы добавить)
-              if (_pageController.hasClients) {
-                final isCycleJump = (currentIndex == state.session!.exercises.length - 1 && targetIndex == 0);
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult:(didPop, result) {},
+      child: Scaffold(
+        backgroundColor: Theme.of(context).colorScheme.surface,
+        body: SafeArea(
+          child: BlocConsumer<WorkoutSessionBloc, WorkoutSessionState>(
+            listenWhen: (previous, current) =>
+                previous.shouldAutoAdvance != current.shouldAutoAdvance ||
+                (!previous.isWorkoutFinished && current.isWorkoutFinished) ||
+                (!previous.isWorkoutAborted && current.isWorkoutAborted),
+            listener: (context, state) {
+              if (state.shouldAutoAdvance && !_isPageAnimating && state.nextIndex != null) {
+                final targetIndex = state.nextIndex!;
+                final currentIndex = state.currentExerciseIndex;
+                // TODO: потом сделать чтобы при листании на последнем, кидало с анимкой на первый (фейк страницы добавить)
+                if (_pageController.hasClients) {
+                  final isCycleJump = (currentIndex == state.session!.exercises.length - 1 && targetIndex == 0);
 
-                _isPageAnimating = true;
+                  _isPageAnimating = true;
 
-                if (isCycleJump) {
-                  // Переход без анимации
-                  _pageController.jumpToPage(targetIndex);
-                  _isPageAnimating = false;
+                  if (isCycleJump) {
+                    // Переход без анимации
+                    _pageController.jumpToPage(targetIndex);
+                    _isPageAnimating = false;
+                    context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
+                    context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
+                  } else {
+                    // Плавная анимация
+                    _pageController.animateToPage(
+                      targetIndex,
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ).then((_) {
+                      _isPageAnimating = false;
+
+                      if (context.mounted) {
+                        context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
+                        context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
+                      }
+                    });
+                  }
+                } else {
+                  // fallback — если не анимируется
                   context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
                   context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
-                } else {
-                  // Плавная анимация
-                  _pageController.animateToPage(
-                    targetIndex,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  ).then((_) {
-                    _isPageAnimating = false;
+                }
+              }
+
+              // <-- Показываем BottomSheet при завершении
+              if (state.isWorkoutFinished) {
+                final completed = state.session!.exercises.where((e) => e.status == ExerciseStatus.done).length;
+                final total = state.session!.exercises.length;
+                final duration = state.session!.endTime!.difference(state.session!.startTime);
+                final workoutLogRepository = locator<WorkoutLogRepository>();
+                final authService = locator<AuthService>();
+
+                Future.delayed(const Duration(milliseconds: 500), () {
+                  WidgetsBinding.instance.addPostFrameCallback((_) async {
+                    final result = await showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      backgroundColor: Colors.transparent,
+                      builder: (context) {
+                        return WorkoutSummaryBottomSheet(
+                          session: state.session!,
+                          completed: completed,
+                          total: total,
+                          duration: duration,
+                          onFinished: ({
+                            required int difficulty,
+                            required String mood,
+                            String? comment,
+                            File? photo,
+                          }) async {
+                            final uid = authService.getCurrentUser()?.uid;
+                            if (uid == null) return;
+                            final logId = '${state.session!.workoutId}_${DateTime.now().toIso8601String()}';
+
+                            final log = WorkoutLog(
+                              id: logId,
+                              userId: uid,
+                              workoutId: state.session!.workoutId,
+                              workoutName: state.session!.workoutName,
+                              goal: state.session!.goal,
+                              date: DateTime.now(),
+                              durationMinutes: duration.inMinutes,
+                              difficulty: difficulty,
+                              mood: mood,
+                              comment: comment,
+                              photoPath: photo?.path,
+                              exercises: state.session!.exercises.map((e) {
+                                return ExerciseLog(
+                                  id: e.exerciseId,
+                                  sets: e.workoutMode.sets,
+                                  reps: e.workoutMode.reps,
+                                  restSeconds: e.workoutMode.restSeconds,
+                                  status: e.status,
+                                );
+                              }).toList(),
+                            );
+
+                            await workoutLogRepository.saveWorkoutLog(log);
+                          },
+                        );
+                      },
+                    );
+
+                    await Future.delayed(const Duration(milliseconds: 150));
 
                     if (context.mounted) {
-                      context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
-                      context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
+                      final shouldShowReminderBanner = result != true;
+
+                      Navigator.of(context).pushAndRemoveUntil(
+                        PageRouteBuilder(
+                          transitionDuration: const Duration(milliseconds: 700),
+                          pageBuilder: (_, __, ___) => HomeScreen(
+                            showReminderBanner: shouldShowReminderBanner,
+                          ),
+                          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                            const begin = Offset(0.0, 1.0);
+                            const end = Offset.zero;
+                            const curve = Curves.easeOutCubic;
+
+                            final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                            return SlideTransition(position: animation.drive(tween), child: child);
+                          },
+                        ),
+                        (route) => false,
+                      );
                     }
                   });
-                }
-              } else {
-                // fallback — если не анимируется
-                context.read<WorkoutSessionBloc>().add(AdvanceToIndex(targetIndex));
-                context.read<WorkoutSessionBloc>().add(ResetAutoAdvance());
-              }
-            }
-
-            // <-- Показываем BottomSheet при завершении
-            if (state.isWorkoutFinished) {
-              final completed = state.session!.exercises.where((e) => e.status == ExerciseStatus.done).length;
-              final total = state.session!.exercises.length;
-              final duration = state.session!.endTime!.difference(state.session!.startTime);
-              final workoutLogRepository = locator<WorkoutLogRepository>();
-              final authService = locator<AuthService>();
-
-              Future.delayed(const Duration(milliseconds: 500), () {
-                WidgetsBinding.instance.addPostFrameCallback((_) async {
-                  final result = await showModalBottomSheet(
-                    context: context,
-                    isScrollControlled: true,
-                    backgroundColor: Colors.transparent,
-                    builder: (context) {
-                      return WorkoutSummaryBottomSheet(
-                        session: state.session!,
-                        completed: completed,
-                        total: total,
-                        duration: duration,
-                        onFinished: ({
-                          required int difficulty,
-                          required String mood,
-                          String? comment,
-                          File? photo,
-                        }) async {
-                          final uid = authService.getCurrentUser()?.uid;
-                          if (uid == null) return;
-                          final logId = '${state.session!.workoutId}_${DateTime.now().toIso8601String()}';
-
-                          final log = WorkoutLog(
-                            id: logId,
-                            userId: uid,
-                            workoutId: state.session!.workoutId,
-                            workoutName: state.session!.workoutName,
-                            goal: state.session!.goal,
-                            date: DateTime.now(),
-                            durationMinutes: duration.inMinutes,
-                            difficulty: difficulty,
-                            mood: mood,
-                            comment: comment,
-                            photoPath: photo?.path,
-                            exercises: state.session!.exercises.map((e) {
-                              return ExerciseLog(
-                                id: e.exerciseId,
-                                sets: e.workoutMode.sets,
-                                reps: e.workoutMode.reps,
-                                restSeconds: e.workoutMode.restSeconds,
-                                status: e.status,
-                              );
-                            }).toList(),
-                          );
-
-                          await workoutLogRepository.saveWorkoutLog(log);
-                        },
-                      );
-                    },
-                  );
-
-                  await Future.delayed(const Duration(milliseconds: 150));
-
-                  if (context.mounted) {
-                    final shouldShowReminderBanner = result != true;
-
-                    Navigator.of(context).pushAndRemoveUntil(
-                      PageRouteBuilder(
-                        transitionDuration: const Duration(milliseconds: 700),
-                        pageBuilder: (_, __, ___) => HomeScreen(
-                          showReminderBanner: shouldShowReminderBanner,
-                        ),
-                        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                          const begin = Offset(0.0, 1.0);
-                          const end = Offset.zero;
-                          const curve = Curves.easeOutCubic;
-
-                          final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                          return SlideTransition(position: animation.drive(tween), child: child);
-                        },
-                      ),
-                      (route) => false,
-                    );
-                  }
                 });
-              });
-            }
-            
-            // Если сессия обнулилась (все скипнули) → просто выходим
-            if (state.isWorkoutAborted) {
-              if (context.mounted) {
-                Navigator.of(context).pushAndRemoveUntil(
-                  PageRouteBuilder(
-                    transitionDuration: const Duration(milliseconds: 700),
-                    pageBuilder: (_, __, ___) => const HomeScreen(),
-                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                      const begin = Offset(0.0, 1.0);
-                      const end = Offset.zero;
-                      const curve = Curves.easeOutCubic;
-                      final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-                      return SlideTransition(position: animation.drive(tween), child: child);
-                    },
-                  ),
-                  (route) => false,
-                );
               }
-            }
-          },
-          builder: (context, state) {
-            final canSwipe = _canSwipe(state);
-            final session = state.session;
-            if (session == null) {
-              return const Center(child: Text('Нет активной тренировки'));
-            }
+              
+              // Если сессия обнулилась (все скипнули) → просто выходим
+              if (state.isWorkoutAborted) {
+                if (context.mounted) {
+                  Navigator.of(context).pushAndRemoveUntil(
+                    PageRouteBuilder(
+                      transitionDuration: const Duration(milliseconds: 700),
+                      pageBuilder: (_, __, ___) => const HomeScreen(),
+                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                        const begin = Offset(0.0, 1.0);
+                        const end = Offset.zero;
+                        const curve = Curves.easeOutCubic;
+                        final tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
+                        return SlideTransition(position: animation.drive(tween), child: child);
+                      },
+                    ),
+                    (route) => false,
+                  );
+                }
+              }
+            },
+            builder: (context, state) {
+              final canSwipe = _canSwipe(state);
+              final session = state.session;
+              if (session == null) {
+                return const Center(child: Text('Нет активной тренировки'));
+              }
 
-            final exercises = session.exercises;
+              final exercises = session.exercises;
 
-            return Padding(
-              padding: const EdgeInsets.all(20),
-              child: Stack(
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _Header(session: session),
-                      const SizedBox(height: 20),
-                      _ProgressIndicator(
-                        exercises: exercises,
-                        currentIndex: state.currentExerciseIndex,
-                      ),
-                      // TODO: нажимаем на кружок - кидает на эту страницу
-                      const SizedBox(height: 20),
-                      Expanded(
-                        child: PageView.builder(
-                          controller: _pageController,
-                          physics: canSwipe
-                              ? const PageScrollPhysics()
-                              : const NeverScrollableScrollPhysics(),
-                          onPageChanged: (index) {
-                            context.read<WorkoutSessionBloc>().add(UpdateCurrentExerciseIndex(index));
-                          },
-                          itemCount: exercises.length,
-                          itemBuilder: (context, index) {
-                            return _ExerciseCard(
-                              exerciseId: exercises[index].exerciseId,
-                              workoutMode: exercises[index].workoutMode,
-                              isResting: state.isResting,
-                              isActive: exercises[index].status == ExerciseStatus.inProgress,
-                            );
-                          },
+              return Padding(
+                padding: const EdgeInsets.all(20),
+                child: Stack(
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _Header(session: session),
+                        const SizedBox(height: 20),
+                        _ProgressIndicator(
+                          exercises: exercises,
+                          currentIndex: state.currentExerciseIndex,
                         ),
-                      ),
-                      const SizedBox(height: 20),
-                      SafeArea(child: _ActionButtons()),
-                    ],
-                  ),
-                ],
-              ),
-            );
-          },
+                        // TODO: нажимаем на кружок - кидает на эту страницу
+                        const SizedBox(height: 20),
+                        Expanded(
+                          child: PageView.builder(
+                            controller: _pageController,
+                            physics: canSwipe
+                                ? const PageScrollPhysics()
+                                : const NeverScrollableScrollPhysics(),
+                            onPageChanged: (index) {
+                              context.read<WorkoutSessionBloc>().add(UpdateCurrentExerciseIndex(index));
+                            },
+                            itemCount: exercises.length,
+                            itemBuilder: (context, index) {
+                              return _ExerciseCard(
+                                exerciseId: exercises[index].exerciseId,
+                                workoutMode: exercises[index].workoutMode,
+                                isResting: state.isResting,
+                                isActive: exercises[index].status == ExerciseStatus.inProgress,
+                              );
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        SafeArea(child: _ActionButtons()),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -272,7 +278,7 @@ class _Header extends StatelessWidget {
       children: [
         Text('Текущая цель: ${session.goal}', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
-        _WorkoutTimer(startTime: session.startTime, endTime: session.endTime),
+        WorkoutTimer(startTime: session.startTime, endTime: session.endTime),
       ],
     );
   }
@@ -324,7 +330,7 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
     _impulseController.dispose();
     super.dispose();
   }
-
+// TODO: наверное заменить тут на state.exercisesById (что в state загружаются через getExercisesByIds)
   Future<void> _loadExercise() async {
     final exercise = await locator<ExerciseRepository>().getExerciseById(widget.exerciseId);
     if (mounted) {
@@ -878,16 +884,22 @@ class _ProgressIndicator extends StatelessWidget {
   }
 }
 
-class _WorkoutTimer extends StatefulWidget {
+class WorkoutTimer extends StatefulWidget {
   final DateTime startTime;
   final DateTime? endTime;
-  const _WorkoutTimer({required this.startTime, required this.endTime});
+  final TextStyle? textStyle;
+  const WorkoutTimer({
+    required this.startTime,
+    required this.endTime,
+    this.textStyle,
+    super.key,
+  });
 
   @override
-  State<_WorkoutTimer> createState() => _WorkoutTimerState();
+  State<WorkoutTimer> createState() => _WorkoutTimerState();
 }
 
-class _WorkoutTimerState extends State<_WorkoutTimer> {
+class _WorkoutTimerState extends State<WorkoutTimer> {
   late Timer _timer;
 
   @override
