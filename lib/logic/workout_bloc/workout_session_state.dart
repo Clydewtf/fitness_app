@@ -14,7 +14,6 @@ class WorkoutSessionState {
   final int? nextIndex;
   final bool isWorkoutFinished;
   final bool isWorkoutAborted;
-  //final Duration? restTimer; // оставшееся время отдыха (если есть)
 
   bool get isActive => session != null;
 
@@ -31,7 +30,6 @@ class WorkoutSessionState {
     this.nextIndex,
     this.isWorkoutFinished = false,
     this.isWorkoutAborted = false,
-    //this.restTimer,
   });
 
   WorkoutSessionState copyWith({
@@ -47,7 +45,6 @@ class WorkoutSessionState {
     int? nextIndex,
     bool? isWorkoutFinished,
     bool? isWorkoutAborted,
-    //Duration? restTimer,
   }) {
     return WorkoutSessionState(
       session: session ?? this.session,
@@ -62,7 +59,6 @@ class WorkoutSessionState {
       nextIndex: nextIndex ?? this.nextIndex,
       isWorkoutFinished: isWorkoutFinished ?? this.isWorkoutFinished,
       isWorkoutAborted: isWorkoutAborted ?? this.isWorkoutAborted,
-      //restTimer: restTimer ?? this.restTimer,
     );
   }
 

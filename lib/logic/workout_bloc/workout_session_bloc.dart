@@ -45,30 +45,6 @@ class WorkoutSessionBloc extends Bloc<WorkoutSessionEvent, WorkoutSessionState> 
     emit(state.copyWith(currentExerciseIndex: event.index));
   }
 
-  // void _onStartSession(StartWorkoutSession event, Emitter emit) {
-  //   final goal = event.goal;
-
-  //   final progressList = event.workout.exercises
-  //       .where((e) => e.modes.containsKey(goal))
-  //       .map((e) => WorkoutExerciseProgress(
-  //             exerciseId: e.exerciseId,
-  //             workoutMode: e.modes[goal]!,
-  //             status: ExerciseStatus.pending,
-  //           ))
-  //       .toList();
-
-  //   final session = WorkoutSession(
-  //     workoutId: event.workout.id,
-  //     workoutName: event.workout.name,
-  //     goal: goal,
-  //     exercises: progressList,
-  //     startTime: DateTime.now(),
-  //     status: WorkoutStatus.inProgress,
-  //   );
-
-  //   emit(state.copyWith(session: session, currentExerciseIndex: 0));
-  // }
-
   Future<void> _onStartSession(StartWorkoutSession event, Emitter emit) async {
     final goal = event.goal;
 

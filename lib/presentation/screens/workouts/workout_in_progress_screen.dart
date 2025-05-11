@@ -225,13 +225,13 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         _Header(session: session),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 8),
                         _ProgressIndicator(
                           exercises: exercises,
                           currentIndex: state.currentExerciseIndex,
                         ),
                         // TODO: нажимаем на кружок - кидает на эту страницу
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
                         Expanded(
                           child: PageView.builder(
                             controller: _pageController,
@@ -252,7 +252,7 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                             },
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 12),
                         SafeArea(child: _ActionButtons()),
                       ],
                     ),
@@ -277,7 +277,7 @@ class _Header extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Текущая цель: ${session.goal}', style: Theme.of(context).textTheme.titleMedium),
-        const SizedBox(height: 8),
+        //const SizedBox(height: 8),
         WorkoutTimer(startTime: session.startTime, endTime: session.endTime),
       ],
     );
@@ -320,7 +320,7 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
 
     _impulseController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 10), // медленнее импульсы
+      duration: const Duration(seconds: 10),
     )..repeat();
   }
 
@@ -436,7 +436,7 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
           ),
         
         Card(
-          elevation: 6,
+          elevation: 3,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
           clipBehavior: Clip.antiAlias,
           child: Column(
@@ -444,15 +444,15 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
             children: [
               if (widget.isActive)
                 Padding(
-                  padding: const EdgeInsets.only(top: 12.0, left: 20, right: 20),
+                  padding: const EdgeInsets.only(top: 4, left: 20, right: 20),
                   child: _buildDots(),
                 ),
               Padding(
                 padding: EdgeInsets.only(
-                  left: 20,
-                  right: 20,
-                  bottom: 20,
-                  top: widget.isActive ? 4 : 20,
+                  left: 16,
+                  right: 16,
+                  bottom: 8,
+                  top: widget.isActive ? 2 : 8,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -474,7 +474,7 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
                     ),
                     if (_exercise!.description != null)
                       Padding(
-                        padding: const EdgeInsets.only(top: 4.0, bottom: 12),
+                        padding: const EdgeInsets.only(bottom: 8),
                         child: Text(
                           _exercise!.description!,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey[700]),
@@ -488,62 +488,82 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
                             Row(
                               children: [
                                 const Icon(Icons.star, size: 18, color: Colors.deepOrange),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 4),
                                 Text('Основные мышцы', style: Theme.of(context).textTheme.labelLarge),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
+                              spacing: 3,
+                              runSpacing: 2,
                               children: _exercise!.primaryMuscles
                                   .map((muscle) => Chip(
                                         label: Text(
                                           muscle,
-                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
+                                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                                        visualDensity: VisualDensity.compact,
                                         backgroundColor: Colors.transparent,
                                         shape: const StadiumBorder(
-                                          side: BorderSide(color: Colors.deepOrange, width: 1.5),
+                                          side: BorderSide(color: Colors.deepOrange, width: 1.2),
                                         ),
                                       ))
                                   .toList(),
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 6),
                           ],
                           if (_exercise!.secondaryMuscles?.isNotEmpty == true) ...[
                             Row(
                               children: [
                                 const Icon(Icons.fitness_center, size: 18, color: Colors.blueGrey),
-                                const SizedBox(width: 6),
+                                const SizedBox(width: 4),
                                 Text('Второстепенные мышцы', style: Theme.of(context).textTheme.labelLarge),
                               ],
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Wrap(
-                              spacing: 8,
-                              runSpacing: 4,
+                              spacing: 2,
+                              runSpacing: 0,
                               children: _exercise!.secondaryMuscles!
                                   .map((muscle) => Chip(
-                                        label: Text(muscle),
+                                        label: Text(muscle, style: const TextStyle(fontSize: 12)),
+                                        padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 0),
+                                        visualDensity: VisualDensity.compact,
                                         backgroundColor: Colors.transparent,
                                         shape: const StadiumBorder(
-                                          side: BorderSide(color: Colors.grey, width: 1.5),
+                                          side: BorderSide(color: Colors.grey, width: 1.2),
                                         ),
                                       ))
                                   .toList(),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 6),
                           ],
                         ],
                       ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        _InfoItem(icon: Icons.fitness_center, label: '$sets подходов'),
-                        _InfoItem(icon: Icons.repeat, label: '$reps повторов'),
-                        _InfoItem(icon: Icons.timer, label: '$rest сек отдыха'),
-                      ],
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final itemWidth = (constraints.maxWidth - 3 * 8 - 2 * 20) / 2;
+
+                        return Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: [
+                            for (final item in [
+                              _InfoItem(icon: Icons.fitness_center, label: '$sets подходов'),
+                              _InfoItem(icon: Icons.repeat, label: '$reps повторов'),
+                              _InfoItem(icon: Icons.timer, label: '$rest сек отдыха'),
+                            ])
+                              SizedBox(
+                                width: itemWidth,
+                                child: item,
+                              ),
+                          ],
+                        );
+                      },
                     ),
                   ],
                 ),
@@ -582,9 +602,9 @@ class _InfoItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey[600]),
-        const SizedBox(width: 6),
-        Text(label, style: Theme.of(context).textTheme.bodyMedium),
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 3),
+        Text(label, style: Theme.of(context).textTheme.bodySmall),
       ],
     );
   }
@@ -741,8 +761,8 @@ class _RestingTimerState extends State<_RestingTimer> {
               alignment: Alignment.center,
               children: [
                 SizedBox(
-                  width: 120,
-                  height: 120,
+                  width: 100,
+                  height: 100,
                   child: CircularProgressIndicator(
                     value: value,
                     strokeWidth: 8,
@@ -760,7 +780,7 @@ class _RestingTimerState extends State<_RestingTimer> {
             );
           },
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Text(
           'Отдых между подходами',
           style: Theme.of(context).textTheme.bodyLarge,
@@ -769,14 +789,14 @@ class _RestingTimerState extends State<_RestingTimer> {
           'Подготовься к следующему упражнению',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
         ),
-        const SizedBox(height: 20),
+        const SizedBox(height: 8),
 
         // Прогресс по подходам
         Text(
           'Подход $currentSet из $totalSets',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 4),
 
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32),
@@ -929,7 +949,8 @@ class _WorkoutTimerState extends State<WorkoutTimer> {
 
     return Text(
       'Время: $mins:$secs',
-      style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
+      style: widget.textStyle ??
+          Theme.of(context).textTheme.labelLarge?.copyWith(color: Colors.grey),
     );
   }
 }

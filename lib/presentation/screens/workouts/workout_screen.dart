@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/locator.dart';
 import '../../../data/models/exercise_model.dart';
-import '../../../data/repositories/my_workout_repository.dart';
-import '../../../logic/auth_bloc/auth_bloc.dart';
-import '../../../logic/auth_bloc/auth_state.dart';
 import '../../../logic/workout_bloc/exercise_event.dart';
 import '../../../logic/workout_bloc/my_workout_bloc.dart';
 import '../../../logic/workout_bloc/my_workout_event.dart';
 import '../../../logic/workout_bloc/my_workout_state.dart';
-import '../../../logic/workout_bloc/workout_event.dart';
 import '../../../services/auth_service.dart';
 import '../../widgets/workouts/exercise_card.dart';
 import '../../../logic/workout_bloc/exercise_bloc.dart';
@@ -18,7 +13,6 @@ import '../../widgets/workouts/filter_bottom_sheet.dart';
 import '../../../logic/workout_bloc/workout_bloc.dart';
 import '../../../logic/workout_bloc/workout_state.dart';
 import '../../widgets/workouts/workout_card.dart';
-import '../../screens/workouts/workout_detail_screen.dart';
 import '../workouts/workout_create_screen.dart';
 import 'my_workouts_screen.dart';
 import 'all_recommended_screen.dart';
@@ -63,6 +57,7 @@ class _WorkoutScreenState extends State<WorkoutScreen> with SingleTickerProvider
   void _openFilterSheet(BuildContext context, List<String> muscleGroups, List<String> types, List<String> equipment) {
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
       ),
@@ -185,7 +180,7 @@ class _WorkoutsTabState extends State<WorkoutsTab> {
                     16,
                     16,
                     16,
-                    16 + MediaQuery.of(context).padding.bottom + 48,
+                    16 + MediaQuery.of(context).padding.bottom,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -233,23 +228,33 @@ class _WorkoutsTabState extends State<WorkoutsTab> {
                           )
                         else
                           // 👉 Карусель
-                          SizedBox(
-                            height: 220,
-                            child: PageView.builder(
-                              controller: _pageController,
-                              itemCount: favorites.length,
-                              onPageChanged: (index) {
-                                setState(() => _currentPage = index);
-                              },
-                              itemBuilder: (context, index) {
-                                final workout = favorites[index].$1;
-                                final isMyWorkout = favorites[index].$2;
-                                return WorkoutCard(
-                                  workout: workout,
-                                  isMyWorkout: isMyWorkout,
-                                );
-                              },
-                            ),
+                          Builder(
+                            builder: (context) {
+                              final screenWidth = MediaQuery.of(context).size.width;
+                              final cardWidth = screenWidth * 0.85;
+                              final aspectRatio = 3 / 2;
+                              final cardHeight = cardWidth / aspectRatio;
+
+                              return SizedBox(
+                                height: cardHeight + 12,
+                                child: PageView.builder(
+                                  controller: _pageController,
+                                  itemCount: favorites.length,
+                                  onPageChanged: (index) {
+                                    setState(() => _currentPage = index);
+                                  },
+                                  itemBuilder: (context, index) {
+                                    final workout = favorites[index].$1;
+                                    final isMyWorkout = favorites[index].$2;
+
+                                    return WorkoutCard(
+                                      workout: workout,
+                                      isMyWorkout: isMyWorkout,
+                                    );
+                                  },
+                                ),
+                              );
+                            },
                           ),
                         if (!showAllFavorites && favorites.length > 1)
                           Padding(
@@ -338,9 +343,6 @@ class _WorkoutsTabState extends State<WorkoutsTab> {
                               },
                             ),
                           );
-                          // TODO: убрать это если что.
-                          // if (!mounted) return;
-                          // rootContext.read<WorkoutBloc>().add(LoadWorkouts());
                         },
                         icon: const Icon(Icons.list_alt_rounded),
                         label: const Text("Мои тренировки"),
@@ -464,103 +466,106 @@ class _ExercisesTabState extends State<ExercisesTab> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<ExerciseBloc, ExerciseState>(
-      builder: (context, state) {
-        if (state is ExerciseLoading) {
-          return const Center(child: CircularProgressIndicator());
-        } else if (state is ExerciseLoaded) {
-          final allExercises = state.allExercises;
-          final filtered = state.filteredExercises;
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: BlocBuilder<ExerciseBloc, ExerciseState>(
+        builder: (context, state) {
+          if (state is ExerciseLoading) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (state is ExerciseLoaded) {
+            final allExercises = state.allExercises;
+            final filtered = state.filteredExercises;
 
-          // 🔹 Собираем уникальные мышцы (основные + второстепенные)
-          final muscleGroups = allExercises
-              .expand((e) => [...e.primaryMuscles, ...(e.secondaryMuscles ?? [])])
-              .whereType<String>()
-              .where((m) => m.trim().isNotEmpty)
-              .toSet()
-              .toList()
-            ..sort();
+            // 🔹 Собираем уникальные мышцы (основные + второстепенные)
+            final muscleGroups = allExercises
+                .expand((e) => [...e.primaryMuscles, ...(e.secondaryMuscles ?? [])])
+                .whereType<String>()
+                .where((m) => m.trim().isNotEmpty)
+                .toSet()
+                .toList()
+              ..sort();
 
-          // 🔹 Уникальные типы и оборудование
-          final types = allExercises.map((e) => e.type).whereType<String>().toSet().toList()..sort();
-          final equipment = allExercises.map((e) => e.equipment).whereType<String>().toSet().toList()..sort();
+            // 🔹 Уникальные типы и оборудование
+            final types = allExercises.map((e) => e.type).whereType<String>().toSet().toList()..sort();
+            final equipment = allExercises.map((e) => e.equipment).whereType<String>().toSet().toList()..sort();
 
-          return Scaffold(
-            appBar: AppBar(
-              title: const Text('Упражнения'),
-              actions: [
-                _FilterBadgeIcon(
-                  filterCount: _getFilterCount(),
-                  onPressed: () {
-                    widget.onOpenFilter(context, muscleGroups, types, equipment);
-                  },
-                ),
-              ],
-            ),
-            body: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: TextField(
-                    controller: _searchController,
-                    onChanged: _onSearchChanged,
-                    decoration: InputDecoration(
-                      hintText: 'Поиск упражнения...',
-                      prefixIcon: const Icon(Icons.search),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
+            return Scaffold(
+              appBar: AppBar(
+                title: const Text('Упражнения'),
+                actions: [
+                  _FilterBadgeIcon(
+                    filterCount: _getFilterCount(),
+                    onPressed: () {
+                      widget.onOpenFilter(context, muscleGroups, types, equipment);
+                    },
+                  ),
+                ],
+              ),
+              body: Column(
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: TextField(
+                      controller: _searchController,
+                      onChanged: _onSearchChanged,
+                      decoration: InputDecoration(
+                        hintText: 'Поиск упражнения...',
+                        prefixIcon: const Icon(Icons.search),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
                   ),
-                ),
-                Expanded(
-                  child: filtered.isEmpty
-                      ? const Center(child: Text("Нет упражнений по выбранным фильтрам"))
-                      : ListView.builder(
-                          itemCount: filtered.length,
-                          itemBuilder: (context, index) {
-                            final exercise = filtered[index];
-                            if (widget.isSelectionMode) {
-                              final isSelected = selectedExercises.any((e) => e.id == exercise.id);
-                              return SelectableExerciseCard(
-                                exercise: exercise,
-                                isSelected: isSelected,
-                                onSelected: (selected) {
-                                  setState(() {
-                                    if (selected) {
-                                      selectedExercises.add(exercise);
-                                    } else {
-                                      selectedExercises.removeWhere((e) => e.id == exercise.id);
-                                    }
-                                  });
-                                },
-                              );
-                            } else {
-                              return ExerciseCard(exercise: exercise);
-                            }
-                          },
-                        ),
-                ),
-                if (widget.isSelectionMode)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        widget.onSelectionDone?.call(selectedExercises);
-                      },
-                      icon: const Icon(Icons.check),
-                      label: const Text('Готово'),
-                    ),
+                  Expanded(
+                    child: filtered.isEmpty
+                        ? const Center(child: Text("Нет упражнений по выбранным фильтрам"))
+                        : ListView.builder(
+                            itemCount: filtered.length,
+                            itemBuilder: (context, index) {
+                              final exercise = filtered[index];
+                              if (widget.isSelectionMode) {
+                                final isSelected = selectedExercises.any((e) => e.id == exercise.id);
+                                return SelectableExerciseCard(
+                                  exercise: exercise,
+                                  isSelected: isSelected,
+                                  onSelected: (selected) {
+                                    setState(() {
+                                      if (selected) {
+                                        selectedExercises.add(exercise);
+                                      } else {
+                                        selectedExercises.removeWhere((e) => e.id == exercise.id);
+                                      }
+                                    });
+                                  },
+                                );
+                              } else {
+                                return ExerciseCard(exercise: exercise);
+                              }
+                            },
+                          ),
                   ),
-              ],
-            ),
-          );
-        } else if (state is ExerciseError) {
-          return Center(child: Text('Ошибка: ${state.message}'));
-        } else {
-          return const SizedBox.shrink(); // fallback
-        }
-      },
+                  if (widget.isSelectionMode)
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: ElevatedButton.icon(
+                        onPressed: () {
+                          widget.onSelectionDone?.call(selectedExercises);
+                        },
+                        icon: const Icon(Icons.check),
+                        label: const Text('Готово'),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          } else if (state is ExerciseError) {
+            return Center(child: Text('Ошибка: ${state.message}'));
+          } else {
+            return const SizedBox.shrink(); // fallback
+          }
+        },
+      ),
     );
   }
 }

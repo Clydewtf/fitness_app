@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/locator.dart';
 import '../../../data/models/workout_session_model.dart';
-import '../../../data/repositories/exercise_repository.dart';
-import '../../../data/repositories/workout_repository.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
 import '../../../logic/workout_bloc/exercise_bloc.dart';
@@ -79,7 +76,7 @@ class WorkoutCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
                           overflow: TextOverflow.ellipsis,
                         ),
-                      ),                  
+                      ),
                       isMyWorkout
                         ? BlocBuilder<MyWorkoutBloc, MyWorkoutState>(
                             builder: (context, state) {
@@ -128,7 +125,6 @@ class WorkoutCard extends StatelessWidget {
                           ),
                     ],
                   ),
-                  const SizedBox(height: 8),
 
                   // 🔸 Время • Уровень • Кол-во упражнений
                   Row(
@@ -150,8 +146,8 @@ class WorkoutCard extends StatelessWidget {
 
                   // 🔸 Тип • Цели • Мышцы
                   Wrap(
-                    spacing: 8,
-                    runSpacing: 4,
+                    spacing: 4,
+                    runSpacing: 3,
                     children: [
                       _chip(workout.type, Colors.blue[50], Colors.blue),
                       ...workout.targetGoals.map((goal) => _chip(goal, Colors.green[50], Colors.green)),
@@ -174,14 +170,27 @@ class WorkoutCard extends StatelessWidget {
 
         // 🟢 Кнопка "Play"
         Positioned(
-          bottom: 16,
-          right: 24,
-          child: FloatingActionButton(
-            backgroundColor: Colors.green,
-            mini: true,
-            elevation: 4,
-            onPressed: () => _handleStartPressed(context),
-            child: const Icon(Icons.play_arrow_rounded, size: 28),
+          bottom: 12,
+          right: 16,
+          child: PhysicalModel(
+            color: Colors.transparent,
+            shadowColor: Colors.black,
+            elevation: 4, // 👈 сила тени
+            shape: BoxShape.circle,
+            child: ClipOval(
+              child: Material(
+                color: Colors.green.withValues(alpha: 0.85),
+                child: InkWell(
+                  splashColor: Colors.white24,
+                  onTap: () => _handleStartPressed(context),
+                  child: const SizedBox(
+                    width: 42,
+                    height: 42,
+                    child: Icon(Icons.play_arrow_rounded, size: 24, color: Colors.white),
+                  ),
+                ),
+              ),
+            ),
           ),
         ),
       ]
@@ -190,11 +199,20 @@ class WorkoutCard extends StatelessWidget {
 
   Widget _chip(String text, Color? bg, Color? fg) {
     return Chip(
-      label: Text(text),
+      label: Text(
+        text,
+        style: TextStyle(
+          color: fg,
+          fontSize: 12, // 👈 меньше размер текста
+        ),
+      ),
       backgroundColor: bg,
-      labelStyle: TextStyle(color: fg),
+      padding: const EdgeInsets.symmetric(horizontal: 0, vertical: 0), // 👈 меньше отступы
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-      padding: const EdgeInsets.symmetric(horizontal: 8),
+      visualDensity: VisualDensity.compact, // 👈 компактная плотность
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8), // 👈 чуть менее округлые углы
+      ),
     );
   }
 

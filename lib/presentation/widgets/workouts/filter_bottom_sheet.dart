@@ -56,94 +56,104 @@ class _FilterBottomSheetState extends State<FilterBottomSheet> {
     final typeItems = ["Все", ...widget.types.toSet()];
     final equipmentItems = ["Все", ...widget.equipment.toSet()];
 
-    return Padding(
-      padding: const EdgeInsets.all(16.0),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text("Фильтр упражнений",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 16),
-
-          FilterDropdown(
-            title: "Мышцы",
-            value: _selectedMuscleGroup,
-            items: muscleGroupItems,
-            onChanged: (value) => setState(() => _selectedMuscleGroup = value),
-          ),
-          FilterDropdown(
-            title: "Тип",
-            value: _selectedType,
-            items: typeItems,
-            onChanged: (value) => setState(() => _selectedType = value),
-          ),
-          FilterDropdown(
-            title: "Оборудование",
-            value: _selectedEquipment,
-            items: equipmentItems,
-            onChanged: (value) => setState(() => _selectedEquipment = value),
-          ),
-
-          Align(
-            alignment: Alignment.centerLeft,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text("Уровень", style: TextStyle(fontSize: 16)),
-            ),
-          ),
-          Wrap(
-            spacing: 8,
-            children: _allLevels.map((level) {
-              final isSelected = _selectedLevels.contains(level);
-              return FilterChip(
-                label: Text(level),
-                selected: isSelected,
-                onSelected: (selected) {
-                  setState(() {
-                    if (selected) {
-                      _selectedLevels.add(level);
-                    } else {
-                      _selectedLevels.remove(level);
-                    }
-                  });
-                },
-              );
-            }).toList(),
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    return SafeArea(
+      child: Padding(
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
+          top: 16,
+          left: 16,
+          right: 16,
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              TextButton(
-                onPressed: () {
-                  _selectedLevels.clear();
-                  widget.onApply(
-                    muscleGroup: null,
-                    type: null,
-                    equipment: null,
-                    levels: null,
-                  );
-                  Navigator.pop(context);
-                },
-                child: const Text("Сбросить"),
+              const Text("Фильтр упражнений",
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+
+              FilterDropdown(
+                title: "Мышцы",
+                value: _selectedMuscleGroup,
+                items: muscleGroupItems,
+                onChanged: (value) => setState(() => _selectedMuscleGroup = value),
               ),
-              ElevatedButton(
-                onPressed: () {
-                  widget.onApply(
-                    muscleGroup: _selectedMuscleGroup == "Все" ? null : _selectedMuscleGroup,
-                    type: _selectedType == "Все" ? null : _selectedType,  
-                    equipment: _selectedEquipment == "Все" ? null : _selectedEquipment,
-                    levels: _selectedLevels.length == _allLevels.length ? null : _selectedLevels,
-                  );
-                  Navigator.pop(context);
-                },
-                child: const Text("Применить"),
+              FilterDropdown(
+                title: "Тип",
+                value: _selectedType,
+                items: typeItems,
+                onChanged: (value) => setState(() => _selectedType = value),
               ),
+              FilterDropdown(
+                title: "Оборудование",
+                value: _selectedEquipment,
+                items: equipmentItems,
+                onChanged: (value) => setState(() => _selectedEquipment = value),
+              ),
+
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text("Уровень", style: TextStyle(fontSize: 16)),
+                ),
+              ),
+              Wrap(
+                spacing: 8,
+                children: _allLevels.map((level) {
+                  final isSelected = _selectedLevels.contains(level);
+                  return FilterChip(
+                    label: Text(level),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      setState(() {
+                        if (selected) {
+                          _selectedLevels.add(level);
+                        } else {
+                          _selectedLevels.remove(level);
+                        }
+                      });
+                    },
+                  );
+                }).toList(),
+              ),
+
+              const SizedBox(height: 16),
+
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  TextButton(
+                    onPressed: () {
+                      _selectedLevels.clear();
+                      widget.onApply(
+                        muscleGroup: null,
+                        type: null,
+                        equipment: null,
+                        levels: null,
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text("Сбросить"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      widget.onApply(
+                        muscleGroup: _selectedMuscleGroup == "Все" ? null : _selectedMuscleGroup,
+                        type: _selectedType == "Все" ? null : _selectedType,
+                        equipment: _selectedEquipment == "Все" ? null : _selectedEquipment,
+                        levels: _selectedLevels.length == _allLevels.length ? null : _selectedLevels,
+                      );
+                      Navigator.pop(context);
+                    },
+                    child: const Text("Применить"),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
             ],
           ),
-        ],
+        ),
       ),
     );
   }

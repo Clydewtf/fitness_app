@@ -4,6 +4,7 @@ import 'package:fitness_app/core/theme/theme.dart';
 import 'package:fitness_app/logic/notification_bloc/notification_event.dart';
 import 'package:fitness_app/logic/workout_bloc/exercise_event.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -28,6 +29,10 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
   tz.initializeTimeZones();
+
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp, // Только вертикально вверх
+  ]);
 
   final notificationService = NotificationService();
   await notificationService.init();

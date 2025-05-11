@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/locator.dart';
 import '../../../data/models/workout_session_model.dart';
-import '../../../data/repositories/exercise_repository.dart';
 import '../../../logic/workout_bloc/workout_session_bloc.dart';
 import '../../screens/workouts/workout_in_progress_screen.dart';
 
@@ -32,22 +30,37 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
   double _dy = 0;
   late PlayerAnchor _currentAnchor;
   late double _screenHeight;
+  final GlobalKey _playerKey = GlobalKey();
+  double _playerHeight = 0;
 
   @override
   void initState() {
     super.initState();
     _currentAnchor = PlayerAnchor.initial;
+
+    // Получаем высоту плеера после первой отрисовки
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _playerKey.currentContext;
+      if (context != null) {
+        final box = context.findRenderObject() as RenderBox;
+        setState(() {
+          _playerHeight = box.size.height;
+        });
+      }
+    });
   }
 
   double _getAnchorOffset(PlayerAnchor anchor) {
-    const playerHeight = 195;
-    const extraPadding = 10;
+    final viewPadding = MediaQuery.of(context).viewPadding;
+    const extraPadding = 20;
 
     switch (anchor) {
       case PlayerAnchor.top:
-        return 45;
+        // Верхняя якорная точка — чуть ниже статус-бара
+        return viewPadding.top + 50;
       case PlayerAnchor.initial:
-        return _screenHeight - playerHeight - widget.navBarHeight - extraPadding;
+        // Нижняя — прямо над нижним меню
+        return _screenHeight - _playerHeight - widget.navBarHeight * 2 - extraPadding;
     }
   }
 
@@ -128,13 +141,15 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
           child: Row(
             children: [
               const Icon(Icons.fitness_center, color: Colors.white),
-              const SizedBox(width: 24),
+              const SizedBox(width: 8),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       exerciseName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.w600,
@@ -166,7 +181,7 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
                     WorkoutTimer(
                       startTime: widget.session.startTime,
                       endTime: widget.session.endTime,
-                      textStyle: const TextStyle(color: Colors.white70, fontSize: 12),
+                      textStyle: const TextStyle(color: Colors.white70, fontSize: 10),
                     ),
                   ],
                 ),
@@ -175,7 +190,7 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
                 Row(
                   children: [
                     const RestIndicator(),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 3),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -183,7 +198,7 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
                           'Отдых',
                           style: TextStyle(
                             color: Colors.white70,
-                            fontSize: 12,
+                            fontSize: 10,
                             fontWeight: FontWeight.w400,
                           ),
                         ),
@@ -191,13 +206,13 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
                           _formatSeconds(widget.restSecondsLeft),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 16,
+                            fontSize: 14,
                             fontWeight: FontWeight.w600,
                           ),
                         ),
                       ],
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 4),
                   ],
                 ),
               const Icon(Icons.keyboard_arrow_up_rounded, color: Colors.white, size: 28),
@@ -245,7 +260,7 @@ class _RestIndicatorState extends State<RestIndicator>
   Widget build(BuildContext context) {
     return FadeTransition(
       opacity: _controller.drive(CurveTween(curve: Curves.easeInOut)),
-      child: const Icon(Icons.hourglass_empty, color: Colors.white70),
+      child: const Icon(Icons.hourglass_empty, color: Colors.white70, size: 24),
     );
   }
 }

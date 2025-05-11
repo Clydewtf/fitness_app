@@ -17,9 +17,7 @@ import '../nutrition/nutrition_screen.dart';
 import '../progress/progress_screen.dart';
 import '../profile/profile_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../auth/login_screen.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
-import '../../../logic/auth_bloc/auth_event.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool showReminderBanner;
@@ -36,7 +34,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
   final GlobalKey _navBarKey = GlobalKey();
-  double _navBarHeight = 80;
+  double _navBarHeight = kBottomNavigationBarHeight;
 
   // Список экранов
   late final List<Widget> _screens;
@@ -56,28 +54,30 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.showReminderBanner) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Вы не завершили тренировку до конца 🧐'),
             duration: Duration(seconds: 3),
           ),
         );
       }
+      // TODO: доделать логику с дозаполнением настроения и прочего после тренировки для сохранения
     });
-    // TODO: доделать логику с дозаполнением настроения и прочего после тренировки для сохранения
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final renderBox = _navBarKey.currentContext?.findRenderObject() as RenderBox?;
-      if (renderBox != null) {
-        setState(() {
-          _navBarHeight = renderBox.size.height;
-        });
+      final context = _navBarKey.currentContext;
+      if (context != null) {
+        final box = context.findRenderObject() as RenderBox?;
+        if (box != null && mounted) {
+          setState(() {
+            _navBarHeight = box.size.height;
+          });
+        }
       }
     });
   }
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    setState(() => _selectedIndex = index);
   }
 
   @override
@@ -85,85 +85,31 @@ class _HomeScreenState extends State<HomeScreen> {
     final authState = context.watch<AuthBloc>().state;
 
     if (authState is! Authenticated) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return MultiBlocProvider(
       providers: [
-        BlocProvider(
-          create: (_) => WorkoutBloc(
-            workoutRepository: locator.get<WorkoutRepository>(),
-            userService: locator.get<UserService>(),
-            uid: authState.user.uid,
-          )..add(LoadWorkouts()),
-        ),
-        BlocProvider(
-          create: (_) => MyWorkoutBloc(
-            locator.get<MyWorkoutRepository>(),
-          )..add(LoadMyWorkouts(authState.user.uid)),
-        ),
-        BlocProvider(
-          create: (_) => WorkoutSessionBloc(),
-        ),
+        BlocProvider(create: (_) => WorkoutBloc(
+          workoutRepository: locator.get<WorkoutRepository>(),
+          userService: locator.get<UserService>(),
+          uid: authState.user.uid,
+        )..add(LoadWorkouts())),
+        BlocProvider(create: (_) => MyWorkoutBloc(locator.get<MyWorkoutRepository>())..add(LoadMyWorkouts(authState.user.uid))),
+        BlocProvider(create: (_) => WorkoutSessionBloc()),
       ],
-// TODO: сделать, чтобы мини-плеер сохранялся при закрытии приложения (или вообще сделать чтобы полностью всё состояние сохранялось)
+
       child: Scaffold(
-        appBar: AppBar(),
+        resizeToAvoidBottomInset: true,
+
+        // ✅ Вместо SafeArea сразу Stack
         body: Stack(
           children: [
-            _screens[_selectedIndex],
-
-            // Нижняя панель
-            Align(
-              alignment: Alignment.bottomCenter,
-              child: Container(
-                key: _navBarKey,
-                decoration: BoxDecoration(
-                  color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(20),
-                    topRight: Radius.circular(20),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withAlpha(38),
-                      blurRadius: 10,
-                      spreadRadius: 2,
-                    ),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 10),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
-                  children: [
-                    _buildNavItem(Icons.fitness_center, "Тренировки", 0),
-                    _buildNavItem(Icons.fastfood, "Питание", 1),
-                    const SizedBox(width: 70),
-                    _buildNavItem(Icons.bar_chart, "Прогресс", 2),
-                    _buildNavItem(Icons.person, "Профиль", 3),
-                  ],
-                ),
-              ),
+            SafeArea(
+              child: _screens[_selectedIndex],
             ),
 
-            // Кнопка "плюс"
-            Positioned(
-              bottom: 15,
-              left: MediaQuery.of(context).size.width / 2 - 30,
-              child: FloatingActionButton(
-                onPressed: () {
-                  // TODO: открытие быстрого добавления
-                },
-                shape: const CircleBorder(),
-                backgroundColor: Colors.blue,
-                elevation: 8,
-                child: const Icon(Icons.add, size: 35, color: Colors.white),
-              ),
-            ),
-
-            // Плеер
+            // ✅ Мини-плеер поверх всего, но выше bottomNavigationBar
             BlocBuilder<WorkoutSessionBloc, WorkoutSessionState>(
               builder: (context, state) {
                 final session = state.session;
@@ -176,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 return Positioned(
                   left: 0,
                   right: 0,
-                  bottom: _navBarHeight + 10,
+                  bottom: _navBarHeight + MediaQuery.of(context).padding.bottom + 10,
                   child: WorkoutSessionMiniPlayer(
                     session: session,
                     currentExercise: index,
@@ -189,6 +135,50 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
+
+        // 🔻 Нижняя навигация остаётся как есть
+        bottomNavigationBar: SafeArea(
+          child: Container(
+            key: _navBarKey,
+            decoration: BoxDecoration(
+              color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              boxShadow: [BoxShadow(color: Colors.black.withAlpha(38), blurRadius: 10, spreadRadius: 2)],
+            ),
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildNavItem(Icons.fitness_center, "Тренировки", 0),
+                _buildNavItem(Icons.fastfood, "Питание", 1),
+                GestureDetector(
+                  onTap: () {
+                    // TODO: Открытие быстрого добавления
+                  },
+                  child: Container(
+                    height: 50,
+                    width: 50,
+                    margin: const EdgeInsets.symmetric(horizontal: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 6,
+                          offset: const Offset(0, 3),
+                        )
+                      ],
+                    ),
+                    child: const Icon(Icons.add, color: Colors.white, size: 30),
+                  ),
+                ),
+                _buildNavItem(Icons.bar_chart, "Прогресс", 2),
+                _buildNavItem(Icons.person, "Профиль", 3),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -196,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildNavItem(IconData icon, String label, int index) {
     return Expanded(
       child: InkWell(
-        onTap: () => _onItemTapped(index), // Делаем кнопку кликабельной
+        onTap: () => _onItemTapped(index),
         borderRadius: BorderRadius.circular(10),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
@@ -211,7 +201,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   blurRadius: 6,
                   spreadRadius: -2,
                   offset: const Offset(0, 2),
-                  blurStyle: BlurStyle.normal,
                 )
             ],
           ),

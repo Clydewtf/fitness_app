@@ -89,63 +89,66 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
   @override
   Widget build(BuildContext context) {
     final height = _getSheetHeightForStep(step);
-    return AnimatedSize(
-      duration: const Duration(milliseconds: 400),
-      curve: Curves.easeInOut,
-      child: Container(
-        padding: EdgeInsets.only(
-          left: 16,
-          right: 16,
-          top: 16,
-          bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-        ),
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        child: SizedBox(
-          height: height,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDragHandle(),
-              const SizedBox(height: 12),
-              Text('Тренировка завершена', style: Theme.of(context).textTheme.titleLarge),
-              const SizedBox(height: 4),
-              Text('Выполнено: ${widget.completed} из ${widget.total}',
-                  style: Theme.of(context).textTheme.bodyMedium),
-              Text('⏱ $timeText', style: Theme.of(context).textTheme.bodySmall),
-              const Divider(height: 32),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: AnimatedSize(
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeInOut,
+        child: Container(
+          padding: EdgeInsets.only(
+            left: 16,
+            right: 16,
+            top: 16,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+          ),
+          decoration: BoxDecoration(
+            color: Theme.of(context).scaffoldBackgroundColor,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: SizedBox(
+            height: height,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildDragHandle(),
+                const SizedBox(height: 12),
+                Text('Тренировка завершена', style: Theme.of(context).textTheme.titleLarge),
+                const SizedBox(height: 4),
+                Text('Выполнено: ${widget.completed} из ${widget.total}',
+                    style: Theme.of(context).textTheme.bodyMedium),
+                Text('⏱ $timeText', style: Theme.of(context).textTheme.bodySmall),
+                const Divider(height: 32),
 
-              Expanded(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      _buildStepContent(),
-                      const SizedBox(height: 24),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: OutlinedButton(
-                              onPressed: skip,
-                              child: const Text('Пропустить')
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        _buildStepContent(),
+                        const SizedBox(height: 24),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: skip,
+                                child: const Text('Пропустить')
+                              ),
                             ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: ElevatedButton(
-                              onPressed: nextStep,
-                              child: Text(step < 3 ? 'Далее' : 'Готово'),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: nextStep,
+                                child: Text(step < 3 ? 'Далее' : 'Готово'),
+                              ),
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

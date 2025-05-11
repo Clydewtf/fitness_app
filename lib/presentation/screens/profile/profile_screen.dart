@@ -15,7 +15,7 @@ class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 
   @override
-  _ProfileScreenState createState() => _ProfileScreenState();
+  State<ProfileScreen> createState() => _ProfileScreenState();
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
@@ -33,163 +33,209 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   @override
+  void dispose() {
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final user = AuthService().getCurrentUser();
+    final initials = user?.email != null
+        ? user!.email![0].toUpperCase()
+        : '?';
 
-    return Scaffold(
-      appBar: AppBar(title: const Text("Профиль")),
-      body: SingleChildScrollView(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: MediaQuery.of(context).size.height,
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Фото профиля
-                Center(
-                  child: GestureDetector(
-                    onTap: _pickAndSaveImage,
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundColor: Colors.grey,
-                      backgroundImage:
-                          _profileImagePath != null ? FileImage(File(_profileImagePath!)) : null,
-                      child: _profileImagePath == null
-                          ? const Icon(Icons.camera_alt, size: 40, color: Colors.white)
-                          : null,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(title: const Text("Профиль")),
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: IntrinsicHeight(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Фото профиля
+                          Center(
+                            child: GestureDetector(
+                              onTap: _pickAndSaveImage,
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey.shade400,
+                                backgroundImage: _profileImagePath != null
+                                    ? FileImage(File(_profileImagePath!))
+                                    : null,
+                                child: _profileImagePath == null
+                                    ? Text(
+                                        initials,
+                                        style: const TextStyle(
+                                          fontSize: 30,
+                                          color: Colors.white,
+                                        ),
+                                      )
+                                    : null,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          const Center(child: Text("Нажмите, чтобы изменить фото")),
+                          const SizedBox(height: 20),
+
+                          const Text("Личные данные",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Divider(height: 20),
+
+                          Text(
+                            user?.email ?? "Неизвестный пользователь",
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 20),
+
+                          _buildTextField("Возраст", _ageController),
+                          _buildTextField("Вес (кг)", _weightController),
+                          _buildTextField("Рост (см)", _heightController),
+
+                          const SizedBox(height: 20),
+                          const Text("Цель",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Divider(height: 20),
+
+                          DropdownButtonFormField<String>(
+                            value: _selectedGoal,
+                            decoration: const InputDecoration(labelText: "Цель"),
+                            items: [
+                              "Набор массы",
+                              "Сушка",
+                              "Поддержание формы",
+                              "Сила",
+                              "Выносливость"
+                            ].map((goal) => DropdownMenuItem(value: goal, child: Text(goal))).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedGoal = value!;
+                              });
+                            },
+                          ),
+
+                          const SizedBox(height: 30),
+                          const Text("Дополнительно",
+                              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                          const Divider(height: 20),
+
+                          ListTile(
+                            leading: const Icon(Icons.credit_card),
+                            title: const Text("Абонемент"),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => SubscriptionScreen()),
+                              );
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.notifications),
+                            title: const Text("Уведомления"),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
+                              );
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.settings),
+                            title: const Text('Настройки'),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => SettingsScreen()),
+                              );
+                            },
+                          ),
+                          const SizedBox(height: 20),
+
+                          Center(
+                            child: TextButton(
+                              onPressed: () {
+                                context.read<AuthBloc>().add(LogoutUser());
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                                );
+                              },
+                              child: const Text("Выйти", style: TextStyle(color: Colors.red)),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Добавляем безопасный отступ с учётом нижнего меню
+                          SizedBox(height: MediaQuery.of(context).padding.bottom),
+                        ],
+                      ),
                     ),
                   ),
                 ),
+              );
+            },
+          ),
+        ),
 
-                const SizedBox(height: 10),
-                const Center(child: Text("Нажмите, чтобы изменить фото")),
-
-                const SizedBox(height: 20),
-
-                // Email (не редактируемый)
-                Text(
-                  user?.email ?? "Неизвестный пользователь",
-                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 20),
-
-                // Поля для возраста, веса, роста
-                _buildTextField("Возраст", _ageController),
-                _buildTextField("Вес (кг)", _weightController),
-                _buildTextField("Рост (см)", _heightController),
-
-                // Выбор цели
-                DropdownButtonFormField<String>(
-                  value: _selectedGoal,
-                  decoration: const InputDecoration(labelText: "Цель"),
-                  items: ["Набор массы", "Сушка", "Поддержание формы", "Сила", "Выносливость"]
-                      .map((goal) => DropdownMenuItem(value: goal, child: Text(goal)))
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedGoal = value!;
-                    });
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Кнопка сохранения
-                ElevatedButton(
-                  onPressed: _saveProfile,
-                  child: const Text("Сохранить изменения"),
-                ),
-
-                const SizedBox(height: 20),
-
-                ListTile(
-                  leading: Icon(Icons.credit_card),
-                  title: Text("Абонемент"),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SubscriptionScreen()),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Настройки уведомлений
-                const Text("Настройки уведомлений", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 10),
-
-                ListTile(
-                  title: const Text("Уведомления"),
-                  trailing: const Icon(Icons.notifications),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const NotificationSettingsScreen()),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                ListTile(
-                  leading: Icon(Icons.settings),
-                  title: Text('Настройки'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => SettingsScreen()),
-                    );
-                  },
-                ),
-
-                const SizedBox(height: 20),
-
-                // Выход из аккаунта
-                TextButton(
-                  onPressed: () {
-                    context.read<AuthBloc>().add(LogoutUser());
-                    // Navigator.pop(context);
-                    Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const LoginScreen()),
-                  );
-                  },
-                  child: const Text("Выйти", style: TextStyle(color: Colors.red)),
-                ),
-
-                const SizedBox(height: 20),
-              ],
-            )
-          )
+        bottomNavigationBar: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ElevatedButton(
+            onPressed: _saveProfile,
+            child: const Text("Сохранить изменения"),
+          ),
         ),
       ),
     );
   }
 
   Future<void> _saveProfile() async {
-  final user = AuthService().getCurrentUser();
-  if (user == null) return;
+    final user = AuthService().getCurrentUser();
+    if (user == null) return;
 
-  Map<String, dynamic> updatedData = {
-    'age': int.tryParse(_ageController.text) ?? 0,
-    'weight': double.tryParse(_weightController.text) ?? 0.0,
-    'height': double.tryParse(_heightController.text) ?? 0.0,
-    'goal': _selectedGoal,
-  };
+    final age = int.tryParse(_ageController.text);
+    final weight = double.tryParse(_weightController.text);
+    final height = double.tryParse(_heightController.text);
 
-  await _userService.updateUserData(user.uid, updatedData);
+    if (age == null || age <= 0) {
+      _showError("Введите корректный возраст");
+      return;
+    }
+    if (weight == null || weight <= 0) {
+      _showError("Введите корректный вес");
+      return;
+    }
+    if (height == null || height <= 0) {
+      _showError("Введите корректный рост");
+      return;
+    }
 
-  ScaffoldMessenger.of(context).hideCurrentSnackBar();
-  ScaffoldMessenger.of(context).showSnackBar(
-    const SnackBar(content: Text('Данные профиля обновлены!')),
-  );
-}
+    Map<String, dynamic> updatedData = {
+      'age': age,
+      'weight': weight,
+      'height': height,
+      'goal': _selectedGoal,
+    };
 
-  // Виджет для текстовых полей
+    await _userService.updateUserData(user.uid, updatedData);
+
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Данные профиля обновлены!')),
+    );
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Widget _buildTextField(String label, TextEditingController controller) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
@@ -198,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         keyboardType: TextInputType.number,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
         ),
       ),
     );
