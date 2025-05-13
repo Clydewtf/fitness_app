@@ -12,6 +12,7 @@ class WorkoutLog {
   final String mood;
   final String? comment;
   final String? photoPath;
+  final double? weight;
 
   final List<ExerciseLog> exercises;
 
@@ -27,6 +28,7 @@ class WorkoutLog {
     required this.mood,
     this.comment,
     this.photoPath,
+    this.weight,
     required this.exercises,
   });
 
@@ -42,6 +44,7 @@ class WorkoutLog {
       'mood': mood,
       'comment': comment,
       'photoPath': photoPath,
+      'weight': weight,
       'exercises': exercises.map((e) => e.toMap()).toList(),
     };
   }
@@ -59,6 +62,7 @@ class WorkoutLog {
       mood: map['mood'],
       comment: map['comment'],
       photoPath: map['photoPath'],
+      weight: map['weight'],
       exercises: (map['exercises'] as List)
           .map((e) => ExerciseLog.fromMap(e))
           .toList(),
@@ -68,15 +72,13 @@ class WorkoutLog {
 
 class ExerciseLog {
   final String id;
-  final int sets;
-  final int reps;
+  final List<ExerciseSetLog> sets;
   final int restSeconds;
   final ExerciseStatus status;
 
   ExerciseLog({
     required this.id,
     required this.sets,
-    required this.reps,
     required this.restSeconds,
     required this.status,
   });
@@ -84,8 +86,7 @@ class ExerciseLog {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
-      'sets': sets,
-      'reps': reps,
+      'sets': sets.map((s) => s.toMap()).toList(),
       'restSeconds': restSeconds,
       'status': status.name,
     };
@@ -94,10 +95,35 @@ class ExerciseLog {
   factory ExerciseLog.fromMap(Map<String, dynamic> map) {
     return ExerciseLog(
       id: map['id'],
-      sets: map['sets'],
-      reps: map['reps'],
+      sets: (map['sets'] as List)
+          .map((s) => ExerciseSetLog.fromMap(s))
+          .toList(),
       restSeconds: map['restSeconds'],
       status: ExerciseStatus.values.byName(map['status']),
+    );
+  }
+}
+
+class ExerciseSetLog {
+  int reps;
+  double? weight;
+
+  ExerciseSetLog({
+    required this.reps,
+    this.weight,
+  });
+
+  Map<String, dynamic> toMap() {
+    return {
+      'reps': reps,
+      'weight': weight,
+    };
+  }
+
+  factory ExerciseSetLog.fromMap(Map<String, dynamic> map) {
+    return ExerciseSetLog(
+      reps: map['reps'],
+      weight: map['weight'] != null ? (map['weight'] as num).toDouble() : null
     );
   }
 }

@@ -129,3 +129,109 @@ class ShakeWidget extends StatelessWidget {
     );
   }
 }
+
+
+
+class IncrementableField extends StatefulWidget {
+  final String label;
+  final double value;
+  final double step;
+  final double? min;
+  final double? max;
+  final ValueChanged<double> onChanged;
+  final String? hintText;
+  final bool isInteger;
+
+  const IncrementableField({
+    super.key,
+    required this.label,
+    required this.value,
+    required this.step,
+    this.min,
+    this.max,
+    required this.onChanged,
+    this.hintText,
+    this.isInteger = false,
+  });
+
+  @override
+  State<IncrementableField> createState() => _IncrementableFieldState();
+}
+
+class _IncrementableFieldState extends State<IncrementableField> {
+  late TextEditingController _controller;
+  late double _currentValue;
+
+  @override
+  void initState() {
+    super.initState();
+    _currentValue = widget.value;
+    _controller = TextEditingController(text: _formatValue(_currentValue));
+  }
+
+  String _formatValue(double value) {
+    return widget.isInteger ? value.toInt().toString() : value.toString();
+  }
+
+  void _updateValue(double newValue) {
+    final min = widget.min ?? double.negativeInfinity;
+    final max = widget.max ?? double.infinity;
+    newValue = newValue.clamp(min, max);
+    setState(() {
+      _currentValue = newValue;
+      _controller.text = _formatValue(newValue);
+    });
+    widget.onChanged(newValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant IncrementableField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.value != _currentValue) {
+      _currentValue = widget.value;
+      _controller.text = _formatValue(_currentValue);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          icon: const Icon(Icons.remove),
+          onPressed: () => _updateValue(_currentValue - widget.step),
+          visualDensity: VisualDensity.compact,
+        ),
+        Expanded(
+          child: TextField(
+            controller: _controller,
+            keyboardType: const TextInputType.numberWithOptions(decimal: false),
+            decoration: InputDecoration(
+              labelText: widget.label,
+              hintText: widget.hintText,
+              hintStyle: TextStyle(
+                color: Colors.grey.withValues(alpha: 0.6),
+              ),
+              floatingLabelBehavior: FloatingLabelBehavior.always,
+              border: const OutlineInputBorder(),
+              isDense: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+            ),
+            onChanged: (val) {
+              final parsed = double.tryParse(val.replaceAll(',', '.'));
+              if (parsed != null) {
+                _currentValue = parsed;
+                widget.onChanged(parsed);
+              }
+            },
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: () => _updateValue(_currentValue + widget.step),
+          visualDensity: VisualDensity.compact,
+        ),
+      ],
+    );
+  }
+}

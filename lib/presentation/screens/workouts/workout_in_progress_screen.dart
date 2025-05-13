@@ -122,11 +122,13 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                           completed: completed,
                           total: total,
                           duration: duration,
+                          exercisesById: state.exercisesById,
                           onFinished: ({
                             required int difficulty,
                             required String mood,
                             String? comment,
                             File? photo,
+                            double? weight,
                           }) async {
                             final uid = authService.getCurrentUser()?.uid;
                             if (uid == null) return;
@@ -144,11 +146,14 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                               mood: mood,
                               comment: comment,
                               photoPath: photo?.path,
+                              weight: weight,
                               exercises: state.session!.exercises.map((e) {
                                 return ExerciseLog(
                                   id: e.exerciseId,
-                                  sets: e.workoutMode.sets,
-                                  reps: e.workoutMode.reps,
+                                  sets: e.sets ?? List.generate(
+                                    e.workoutMode.sets,
+                                    (_) => ExerciseSetLog(reps: e.workoutMode.reps),
+                                  ),
                                   restSeconds: e.workoutMode.restSeconds,
                                   status: e.status,
                                 );
@@ -330,7 +335,7 @@ class _ExerciseCardState extends State<_ExerciseCard> with TickerProviderStateMi
     _impulseController.dispose();
     super.dispose();
   }
-// TODO: наверное заменить тут на state.exercisesById (что в state загружаются через getExercisesByIds)
+
   Future<void> _loadExercise() async {
     final exercise = await locator<ExerciseRepository>().getExerciseById(widget.exerciseId);
     if (mounted) {
@@ -620,6 +625,7 @@ class _ActionButtons extends StatefulWidget {
 class _ActionButtonsState extends State<_ActionButtons> {
   final ShakeController _shakeController = ShakeController();
   ExerciseStatus? _previousStatus;
+  bool _isWaitingAfterRest = false;
 
   @override
   void dispose() {
@@ -629,92 +635,112 @@ class _ActionButtonsState extends State<_ActionButtons> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocBuilder<WorkoutSessionBloc, WorkoutSessionState>(
-      buildWhen: (previous, current) =>
-          previous.currentExerciseIndex != current.currentExerciseIndex ||
-          previous.isResting != current.isResting ||
-          previous.restSecondsLeft != current.restSecondsLeft ||
-          previous.currentExercise?.status != current.currentExercise?.status,
-      builder: (context, state) {
-        final currentIndex = state.currentExerciseIndex;
-        final exercise = state.currentExercise;
-
-        if (exercise == null || state.isResting) return const SizedBox.shrink();
-
-        final status = exercise.status;
-
-        if (_previousStatus != ExerciseStatus.inProgress &&
-            status == ExerciseStatus.inProgress) {
-          Future.microtask(() {
-            _shakeController.shake();
-          });
-        }
-
-        _previousStatus = status;
-
-        Widget buildButtonGroup({required List<Widget> buttons}) {
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: buttons
-                .map((btn) => Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: btn,
-                    ))
-                .toList(),
-          );
-        }
-
-        switch (status) {
-          case ExerciseStatus.pending:
-            return buildButtonGroup(
-              buttons: [
-                ElevatedButton(
-                  onPressed: () {
-                    context
-                        .read<WorkoutSessionBloc>()
-                        .add(StartExercise(currentIndex));
-                  },
-                  child: const Text('Начать упражнение'),
-                ),
-                OutlinedButton(
-                  onPressed: () {
-                    context
-                        .read<WorkoutSessionBloc>()
-                        .add(SkipExercise(currentIndex));
-                  },
-                  child: const Text('Пропустить'),
-                ),
-              ],
-            );
-
-          case ExerciseStatus.inProgress:
-            return buildButtonGroup(
-              buttons: [
-                ShakeWidget(
-                  controller: _shakeController,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      context.read<WorkoutSessionBloc>().add(CompleteSet());
-                    },
-                    child: const Text('Завершить подход'),
-                  ),
-                ),
-                OutlinedButton(
-                  onPressed: () {
-                    context
-                        .read<WorkoutSessionBloc>()
-                        .add(SkipExercise(currentIndex));
-                  },
-                  child: const Text('Пропустить'),
-                ),
-              ],
-            );
-
-          case ExerciseStatus.done:
-          case ExerciseStatus.skipped:
-            return const SizedBox.shrink();
-        }
+    return BlocListener<WorkoutSessionBloc, WorkoutSessionState>(
+      listenWhen: (previous, current) =>
+          previous.isResting == true && current.isResting == false,
+      listener: (context, state) {
+        setState(() {
+          _isWaitingAfterRest = true;
+        });
+        Future.delayed(const Duration(milliseconds: 400), () {
+          if (mounted) {
+            setState(() {
+              _isWaitingAfterRest = false;
+            });
+          }
+        });
       },
+      child: BlocBuilder<WorkoutSessionBloc, WorkoutSessionState>(
+        buildWhen: (previous, current) =>
+            previous.currentExerciseIndex != current.currentExerciseIndex ||
+            previous.isResting != current.isResting ||
+            previous.restSecondsLeft != current.restSecondsLeft ||
+            previous.currentExercise?.status != current.currentExercise?.status,
+        builder: (context, state) {
+          final currentIndex = state.currentExerciseIndex;
+          final exercise = state.currentExercise;
+
+          if (exercise == null || state.isResting || _isWaitingAfterRest) {
+            return const SizedBox.shrink();
+          }
+
+          final status = exercise.status;
+
+          if (_previousStatus != ExerciseStatus.inProgress &&
+              status == ExerciseStatus.inProgress) {
+            Future.microtask(() {
+              _shakeController.shake();
+            });
+          }
+
+          _previousStatus = status;
+
+          Widget buildButtonGroup({required List<Widget> buttons}) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: buttons
+                  .map((btn) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: btn,
+                      ))
+                  .toList(),
+            );
+          }
+
+          switch (status) {
+            case ExerciseStatus.pending:
+              return buildButtonGroup(
+                buttons: [
+                  ElevatedButton(
+                    onPressed: () {
+                      context
+                          .read<WorkoutSessionBloc>()
+                          .add(StartExercise(currentIndex));
+                    },
+                    child: const Text('Начать упражнение'),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      context
+                          .read<WorkoutSessionBloc>()
+                          .add(SkipExercise(currentIndex));
+                    },
+                    child: const Text('Пропустить'),
+                  ),
+                ],
+              );
+
+            case ExerciseStatus.inProgress:
+              return buildButtonGroup(
+                buttons: [
+                  ShakeWidget(
+                    controller: _shakeController,
+                    child: ElevatedButton(
+                      onPressed: () {
+                        context
+                            .read<WorkoutSessionBloc>()
+                            .add(CompleteSet());
+                      },
+                      child: const Text('Завершить подход'),
+                    ),
+                  ),
+                  OutlinedButton(
+                    onPressed: () {
+                      context
+                          .read<WorkoutSessionBloc>()
+                          .add(SkipExercise(currentIndex));
+                    },
+                    child: const Text('Пропустить'),
+                  ),
+                ],
+              );
+
+            case ExerciseStatus.done:
+            case ExerciseStatus.skipped:
+              return const SizedBox.shrink();
+          }
+        },
+      ),
     );
   }
 }

@@ -1,3 +1,4 @@
+import 'workout_log_model.dart';
 import 'workout_model.dart';
 
 enum WorkoutStatus { initial, inProgress, completed }
@@ -32,11 +33,15 @@ class WorkoutExerciseProgress {
   ExerciseStatus status;
   Duration? timeSpent;
 
+  /// Новое поле для ручного ввода данных по подходам
+  List<ExerciseSetLog>? sets;
+
   WorkoutExerciseProgress({
     required this.exerciseId,
     required this.workoutMode,
     this.status = ExerciseStatus.pending,
     this.timeSpent,
+    this.sets,
   });
 }
 
@@ -68,12 +73,14 @@ extension WorkoutExerciseProgressCopyWith on WorkoutExerciseProgress {
     WorkoutMode? workoutMode,
     ExerciseStatus? status,
     Duration? timeSpent,
+    List<ExerciseSetLog>? sets,
   }) {
     return WorkoutExerciseProgress(
       exerciseId: exerciseId ?? this.exerciseId,
       workoutMode: workoutMode ?? this.workoutMode,
       status: status ?? this.status,
       timeSpent: timeSpent ?? this.timeSpent,
+      sets: sets ?? this.sets,
     );
   }
 }

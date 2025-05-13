@@ -19,6 +19,18 @@ class UserService {
     await _firestore.collection('users').doc(uid).update(updatedData);
   }
 
+  Future<double?> getUserWeight(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      final weight = data['weight'];
+      if (weight != null) {
+        return (weight as num).toDouble();
+      }
+    }
+    return null;
+  }
+
   // Сохраняем фото локально
   Future<String?> saveProfileImage(File imageFile) async {
     try {
