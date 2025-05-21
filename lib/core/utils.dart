@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import '../data/models/workout_log_model.dart';
 import '../data/models/workout_session_model.dart';
+import '../data/models/exercise_model.dart';
+import '../data/repositories/exercise_repository.dart';
+import 'locator.dart';
 
 int? findNextIncompleteExercise(List<WorkoutExerciseProgress> exercises, int justCompletedIndex) {
   final total = exercises.length;
@@ -20,6 +24,50 @@ int? findNextIncompleteExercise(List<WorkoutExerciseProgress> exercises, int jus
 
 bool _isDoneOrSkipped(WorkoutExerciseProgress e) {
   return e.status == ExerciseStatus.done || e.status == ExerciseStatus.skipped;
+}
+
+
+
+bool isLogComplete(WorkoutLog log, {required bool requireWeightsInSets}) {
+  final hasMood = log.mood != null;
+  final hasDifficulty = log.difficulty != null;
+  final hasUserWeight = log.weight != null;
+
+  final hasWeightInSets = log.exercises.any((exercise) {
+    return exercise.sets.any((set) => set.weight != null);
+  });
+
+  final weightsOk = !requireWeightsInSets || hasWeightInSets;
+
+  return hasMood && hasDifficulty && hasUserWeight && weightsOk;
+}
+
+
+
+class ExerciseNameText extends StatelessWidget {
+  final String exerciseId;
+  final TextStyle? style;
+
+  const ExerciseNameText(this.exerciseId, {this.style, super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<Exercise?>(
+      future: locator<ExerciseRepository>().getExerciseById(exerciseId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Text("Загрузка...", style: style?.copyWith(color: Colors.grey));
+        }
+
+        final exercise = snapshot.data;
+        if (exercise != null) {
+          return Text(exercise.name, style: style);
+        } else {
+          return Text("Упражнение не найдено", style: style?.copyWith(color: Colors.red));
+        }
+      },
+    );
+  }
 }
 
 
@@ -134,22 +182,22 @@ class ShakeWidget extends StatelessWidget {
 
 class IncrementableField extends StatefulWidget {
   final String label;
-  final double value;
+  final double? value;
   final double step;
   final double? min;
   final double? max;
-  final ValueChanged<double> onChanged;
+  final ValueChanged<double?> onChanged;
   final String? hintText;
   final bool isInteger;
 
   const IncrementableField({
     super.key,
     required this.label,
-    required this.value,
     required this.step,
+    required this.onChanged,
+    this.value,
     this.min,
     this.max,
-    required this.onChanged,
     this.hintText,
     this.isInteger = false,
   });
@@ -160,12 +208,12 @@ class IncrementableField extends StatefulWidget {
 
 class _IncrementableFieldState extends State<IncrementableField> {
   late TextEditingController _controller;
-  late double _currentValue;
+  double _currentValue = 0.0;
 
   @override
   void initState() {
     super.initState();
-    _currentValue = widget.value;
+    _currentValue = widget.value ?? 0.0;
     _controller = TextEditingController(text: _formatValue(_currentValue));
   }
 
@@ -173,22 +221,21 @@ class _IncrementableFieldState extends State<IncrementableField> {
     return widget.isInteger ? value.toInt().toString() : value.toString();
   }
 
-  void _updateValue(double newValue) {
-    final min = widget.min ?? double.negativeInfinity;
-    final max = widget.max ?? double.infinity;
-    newValue = newValue.clamp(min, max);
+  void _setValue(double newValue) {
+    final clamped = newValue.clamp(widget.min ?? double.negativeInfinity, widget.max ?? double.infinity);
     setState(() {
-      _currentValue = newValue;
-      _controller.text = _formatValue(newValue);
+      _currentValue = clamped;
+      _controller.text = _formatValue(clamped);
     });
-    widget.onChanged(newValue);
+    widget.onChanged(clamped == 0.0 ? null : clamped);
   }
 
   @override
   void didUpdateWidget(covariant IncrementableField oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.value != _currentValue) {
-      _currentValue = widget.value;
+    final newValue = widget.value ?? 0.0;
+    if (newValue != _currentValue) {
+      _currentValue = newValue;
       _controller.text = _formatValue(_currentValue);
     }
   }
@@ -199,13 +246,13 @@ class _IncrementableFieldState extends State<IncrementableField> {
       children: [
         IconButton(
           icon: const Icon(Icons.remove),
-          onPressed: () => _updateValue(_currentValue - widget.step),
+          onPressed: () => _setValue(_currentValue - widget.step),
           visualDensity: VisualDensity.compact,
         ),
         Expanded(
           child: TextField(
             controller: _controller,
-            keyboardType: const TextInputType.numberWithOptions(decimal: false),
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: InputDecoration(
               labelText: widget.label,
               hintText: widget.hintText,
@@ -219,16 +266,15 @@ class _IncrementableFieldState extends State<IncrementableField> {
             ),
             onChanged: (val) {
               final parsed = double.tryParse(val.replaceAll(',', '.'));
-              if (parsed != null) {
-                _currentValue = parsed;
-                widget.onChanged(parsed);
-              }
+              final value = parsed ?? 0.0;
+              _currentValue = value;
+              widget.onChanged(value == 0.0 ? null : value);
             },
           ),
         ),
         IconButton(
           icon: const Icon(Icons.add),
-          onPressed: () => _updateValue(_currentValue + widget.step),
+          onPressed: () => _setValue(_currentValue + widget.step),
           visualDensity: VisualDensity.compact,
         ),
       ],

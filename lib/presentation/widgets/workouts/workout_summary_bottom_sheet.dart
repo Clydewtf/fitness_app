@@ -16,8 +16,8 @@ class WorkoutSummaryBottomSheet extends StatefulWidget {
   final int total;
   final Duration duration;
   final void Function({
-    required int difficulty,
-    required String mood,
+    int? difficulty,
+    String? mood,
     String? comment,
     File? photo,
     double? weight,
@@ -57,6 +57,7 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
   WorkoutLog? _previousLog;
   Duration? _daysAgo;
   bool get hasPreviousLog => _previousLog != null;
+  bool _requireWeightsInSets = true;
   
 
   String get timeText =>
@@ -67,16 +68,25 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
     super.initState();
     _loadUserWeight();
     _loadPreviousLog();
+    _loadSettings();
 
     for (var e in widget.session.exercises) {
       // Только для выполненных упражнений и если sets ещё не заданы
       if (e.status == ExerciseStatus.done && e.sets == null) {
         e.sets = List.generate(
           e.workoutMode.sets,
-          (_) => ExerciseSetLog(weight: 0, reps: e.workoutMode.reps),
+          (_) => ExerciseSetLog(reps: e.workoutMode.reps),
         );
       }
     }
+  }
+
+  Future<void> _loadSettings() async {
+    final settings = UserSettingsStorage();
+    final value = await settings.getRequireWeightsInSets();
+    setState(() {
+      _requireWeightsInSets = value;
+    });
   }
 
   Future<void> _loadUserWeight() async {
@@ -146,8 +156,8 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
       setState(() => step += 1);
     } else {
       widget.onFinished?.call(
-        difficulty: selectedDifficulty ?? 3,
-        mood: selectedMood ?? '😐',
+        difficulty: selectedDifficulty,
+        mood: selectedMood,
         comment: comment,
         photo: selectedImage,
         weight: weight,
@@ -158,8 +168,8 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
 
   void skip() {
     widget.onFinished?.call(
-      difficulty: selectedDifficulty ?? 3,
-      mood: selectedMood ?? '😐',
+      difficulty: null,
+      mood: null,
       comment: null,
       photo: null,
       weight: null,
@@ -386,7 +396,7 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
           ),
           const SizedBox(height: 24),
 
-          if (hasPreviousLog && _daysAgo != null) ...[
+          if (hasPreviousLog && _daysAgo != null && _requireWeightsInSets) ...[
             Text(
               'Вы выполняли эту тренировку ${_formatDaysAgo(_daysAgo!)}. '
               'Заполнить прошлые значения?',
@@ -404,9 +414,10 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
           ],
 
           // 🏋️‍♂️ УПРАЖНЕНИЯ
-          Text('Упражнения (необязательно)', style: Theme.of(context).textTheme.titleMedium),
-          const SizedBox(height: 8),
-          ...doneExercises.map((log) {
+          if (_requireWeightsInSets)
+            Text('Упражнения (необязательно)', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            ...doneExercises.map((log) {
             final sets = log.sets ?? [];
             final name = widget.exercisesById[log.exerciseId]?.name ?? 'Упражнение';
 
@@ -427,14 +438,14 @@ class _WorkoutSummaryBottomSheetState extends State<WorkoutSummaryBottomSheet> {
                           min: 0,
                           max: 100,
                           isInteger: true,
-                          onChanged: (val) => set.reps = val.round(),
+                          onChanged: (val) => set.reps = val!.round(),
                         ),
                       ),
                       const SizedBox(width: 2),
                       Expanded(
                         child: IncrementableField(
                           label: 'Вес (кг)',
-                          value: set.weight?.toDouble() ?? 0.0,
+                          value: set.weight,
                           step: 2.5,
                           min: 0,
                           max: 500,

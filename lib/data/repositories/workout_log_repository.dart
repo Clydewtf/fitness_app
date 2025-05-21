@@ -29,4 +29,14 @@ class WorkoutLogRepository {
       return WorkoutLog.fromMap(doc.id, doc.data());
     }).toList();
   }
+
+  Future<void> updateWorkoutLog(WorkoutLog log) async {
+    final docRef = _firestore
+        .collection('users')
+        .doc(log.userId)
+        .collection('workoutLogs')
+        .doc(log.id);
+
+    await docRef.update(log.toMap());
+  }
 }

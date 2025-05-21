@@ -8,8 +8,8 @@ class WorkoutLog {
   final String goal;
   final DateTime date;
   final int durationMinutes;
-  final int difficulty;
-  final String mood;
+  final int? difficulty;
+  final String? mood;
   final String? comment;
   final String? photoPath;
   final double? weight;
@@ -24,8 +24,8 @@ class WorkoutLog {
     required this.goal,
     required this.date,
     required this.durationMinutes,
-    required this.difficulty,
-    required this.mood,
+    this.difficulty,
+    this.mood,
     this.comment,
     this.photoPath,
     this.weight,
@@ -123,7 +123,69 @@ class ExerciseSetLog {
   factory ExerciseSetLog.fromMap(Map<String, dynamic> map) {
     return ExerciseSetLog(
       reps: map['reps'],
-      weight: map['weight'] != null ? (map['weight'] as num).toDouble() : null
+      weight: map['weight'] != null ? (map['weight'] as num).toDouble() : null,
+    );
+  }
+}
+
+extension WorkoutLogCopyWith on WorkoutLog {
+  WorkoutLog copyWith({
+    String? id,
+    String? userId,
+    String? workoutId,
+    String? workoutName,
+    String? goal,
+    DateTime? date,
+    int? durationMinutes,
+    int? difficulty,
+    String? mood,
+    String? comment,
+    String? photoPath,
+    double? weight,
+    List<ExerciseLog>? exercises,
+  }) {
+    return WorkoutLog(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      workoutId: workoutId ?? this.workoutId,
+      workoutName: workoutName ?? this.workoutName,
+      goal: goal ?? this.goal,
+      date: date ?? this.date,
+      durationMinutes: durationMinutes ?? this.durationMinutes,
+      difficulty: difficulty ?? this.difficulty,
+      mood: mood ?? this.mood,
+      comment: comment ?? this.comment,
+      photoPath: photoPath ?? this.photoPath,
+      weight: weight ?? this.weight,
+      exercises: exercises ?? this.exercises,
+    );
+  }
+}
+
+extension ExerciseLogCopyWith on ExerciseLog {
+  ExerciseLog copyWith({
+    String? id,
+    List<ExerciseSetLog>? sets,
+    int? restSeconds,
+    ExerciseStatus? status,
+  }) {
+    return ExerciseLog(
+      id: id ?? this.id,
+      sets: sets ?? this.sets,
+      restSeconds: restSeconds ?? this.restSeconds,
+      status: status ?? this.status,
+    );
+  }
+}
+
+extension ExerciseSetLogCopyWith on ExerciseSetLog {
+  ExerciseSetLog copyWith({
+    int? reps,
+    double? weight,
+  }) {
+    return ExerciseSetLog(
+      reps: reps ?? this.reps,
+      weight: weight ?? this.weight,
     );
   }
 }

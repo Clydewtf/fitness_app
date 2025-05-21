@@ -124,8 +124,8 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                           duration: duration,
                           exercisesById: state.exercisesById,
                           onFinished: ({
-                            required int difficulty,
-                            required String mood,
+                            int? difficulty,
+                            String? mood,
                             String? comment,
                             File? photo,
                             double? weight,

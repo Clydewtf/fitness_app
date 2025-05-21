@@ -81,3 +81,17 @@ class UserService {
     });
   }
 }
+
+class UserSettingsStorage {
+  static const _keyRequireWeights = 'require_weights_in_sets';
+
+  Future<bool> getRequireWeightsInSets() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_keyRequireWeights) ?? true;
+  }
+
+  Future<void> setRequireWeightsInSets(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_keyRequireWeights, value);
+  }
+}

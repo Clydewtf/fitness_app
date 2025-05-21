@@ -1,5 +1,7 @@
 import 'package:get_it/get_it.dart';
+import '../data/repositories/photo_progress_repository.dart';
 import '../data/repositories/workout_log_repository.dart';
+import '../logic/progress_bloc/photo_progress_cubit.dart';
 import '../logic/workout_bloc/my_workout_bloc.dart';
 import '../services/auth_service.dart';
 import '../services/user_service.dart';
@@ -28,6 +30,7 @@ void setupLocator() {
   locator.registerLazySingleton<NutritionRepository>(() => NutritionRepository());
   locator.registerLazySingleton<MyWorkoutRepository>(() => MyWorkoutRepository());
   locator.registerLazySingleton<WorkoutLogRepository>(() => WorkoutLogRepository());
+  locator.registerLazySingleton<PhotoProgressRepository>(() => PhotoProgressRepository());
 
   // Регистрация BLoC (создаются каждый раз при запросе)
   locator.registerFactory(() => AuthBloc(locator<AuthService>()));
@@ -35,4 +38,5 @@ void setupLocator() {
   locator.registerFactory(() => NutritionBloc(locator<NutritionRepository>()));
   locator.registerFactory(() => NotificationBloc(notificationService: locator<NotificationService>()));
   locator.registerFactory(() => MyWorkoutBloc(locator<MyWorkoutRepository>()));
+  locator.registerFactory(() => PhotoProgressCubit(repository: locator<PhotoProgressRepository>()));
 }
