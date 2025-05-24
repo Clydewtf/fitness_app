@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -8,13 +9,17 @@ import '../../../core/utils.dart';
 import '../../../data/models/exercise_model.dart';
 import '../../../data/models/workout_log_model.dart';
 import '../../../data/models/workout_model.dart';
+import '../../../data/repositories/body_log_repository.dart';
 import '../../../data/repositories/exercise_repository.dart';
+import '../../../data/repositories/photo_progress_repository.dart';
 import '../../../data/repositories/workout_log_repository.dart';
 import '../../../logic/workout_bloc/workout_session_bloc.dart';
 import '../../../data/models/workout_session_model.dart';
 import '../../../logic/workout_bloc/workout_session_event.dart';
 import '../../../logic/workout_bloc/workout_session_state.dart';
+import '../../../services/achievement_service.dart';
 import '../../../services/auth_service.dart';
+import '../../../services/user_service.dart';
 import '../../widgets/workouts/workout_summary_bottom_sheet.dart';
 import '../home/home_screen.dart';
 
@@ -132,7 +137,9 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                           }) async {
                             final uid = authService.getCurrentUser()?.uid;
                             if (uid == null) return;
-                            final logId = '${state.session!.workoutId}_${DateTime.now().toIso8601String()}';
+
+                            final now = DateTime.now();
+                            final logId = '${state.session!.workoutId}_${now.toIso8601String()}';
 
                             final log = WorkoutLog(
                               id: logId,
@@ -140,7 +147,7 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                               workoutId: state.session!.workoutId,
                               workoutName: state.session!.workoutName,
                               goal: state.session!.goal,
-                              date: DateTime.now(),
+                              date: now,
                               durationMinutes: duration.inMinutes,
                               difficulty: difficulty,
                               mood: mood,
@@ -161,6 +168,36 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                             );
 
                             await workoutLogRepository.saveWorkoutLog(log);
+
+                            // ⬇️ Добавим вес в BodyLog, если он указан
+                            if (weight != null) {
+                              final bodyLogRepo = BodyLogRepository(
+                                firestore: FirebaseFirestore.instance,
+                                userId: uid,
+                              );
+
+                              final autoUpdate = await UserSettingsStorage().getAutoUpdateWeight();
+
+                              await bodyLogRepo.addOrUpdateWeightFromExternalSource(
+                                weight,
+                                now,
+                                shouldUpdateProfile: autoUpdate,
+                              );
+                            }
+
+                            // ⬇️ Обновляем ачивки
+                            final workoutLogs = await WorkoutLogRepository().getWorkoutLogs(uid);
+                            final photoLogs = await PhotoProgressRepository().loadEntries();
+                            final bodyLogs = await BodyLogRepository(
+                              firestore: FirebaseFirestore.instance,
+                              userId: uid,
+                            ).loadLogs();
+
+                            await AchievementService().checkAndUpdateAchievements(
+                              workoutLogs: workoutLogs,
+                              photoEntries: photoLogs,
+                              bodyLogs: bodyLogs,
+                            );
                           },
                         );
                       },

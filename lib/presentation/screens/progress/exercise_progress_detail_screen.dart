@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:fl_chart/fl_chart.dart';
@@ -19,7 +18,7 @@ class ExerciseProgressDetailScreen extends StatefulWidget {
 class _ExerciseProgressDetailScreenState extends State<ExerciseProgressDetailScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  String _selectedRange = '30д'; // По умолчанию 30 дней
+  String _selectedRange = '30д';
 
   @override
   void initState() {

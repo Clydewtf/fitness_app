@@ -1,10 +1,16 @@
 import 'dart:io';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../../core/locator.dart';
 import '../../../data/models/photo_progress_entry.dart';
+import '../../../data/repositories/body_log_repository.dart';
+import '../../../data/repositories/photo_progress_repository.dart';
+import '../../../data/repositories/workout_log_repository.dart';
 import '../../../logic/progress_bloc/photo_progress_cubit.dart';
+import '../../../services/achievement_service.dart';
+import '../../../services/auth_service.dart';
 import '../../widgets/progress/photo_full_screen.dart';
 
 class PhotoProgressWrapper extends StatelessWidget {
@@ -72,6 +78,23 @@ class PhotoProgressScreen extends StatelessWidget {
       );
 
       await cubit.addEntry(entry);
+
+      // ⬇️ Обновляем ачивки
+      final uid = AuthService().getCurrentUser()?.uid;
+      if (uid == null) return;
+
+      final workoutLogs = await WorkoutLogRepository().getWorkoutLogs(uid);
+      final photoLogs = await PhotoProgressRepository().loadEntries();
+      final bodyLogs = await BodyLogRepository(
+        firestore: FirebaseFirestore.instance,
+        userId: uid,
+      ).loadLogs();
+
+      await AchievementService().checkAndUpdateAchievements(
+        workoutLogs: workoutLogs,
+        photoEntries: photoLogs,
+        bodyLogs: bodyLogs,
+      );
     }
   }
 

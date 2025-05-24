@@ -12,6 +12,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   bool requireWeightsInSets = true;
+  bool autoUpdateWeight = true;
   final UserSettingsStorage _storage = UserSettingsStorage();
 
   @override
@@ -21,9 +22,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _loadSettings() async {
-    final value = await _storage.getRequireWeightsInSets();
+    final weightsInSets = await _storage.getRequireWeightsInSets();
+    final autoUpdate = await _storage.getAutoUpdateWeight();
     setState(() {
-      requireWeightsInSets = value;
+      requireWeightsInSets = weightsInSets;
+      autoUpdateWeight = autoUpdate;
     });
   }
 
@@ -32,6 +35,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       requireWeightsInSets = value;
     });
     await _storage.setRequireWeightsInSets(value);
+  }
+
+  void _toggleAutoUpdateWeight(bool value) async {
+    setState(() {
+      autoUpdateWeight = value;
+    });
+    await _storage.setAutoUpdateWeight(value);
   }
 
   @override
@@ -60,6 +70,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Switch(
               value: requireWeightsInSets,
               onChanged: _toggleRequireWeights,
+            ),
+          ),
+          ListTile(
+            title: Text('Обновлять вес в профиле'),
+            subtitle: Text('После тренировки / во вкладке прогресс вес будет сохраняться и становиться актуальным'),
+            trailing: Switch(
+              value: autoUpdateWeight,
+              onChanged: _toggleAutoUpdateWeight,
             ),
           ),
         ],

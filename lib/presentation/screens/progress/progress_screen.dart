@@ -11,9 +11,11 @@ import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
 import '../../widgets/progress/recent_workout_card.dart';
 import '../../widgets/progress/workout_log_dialog.dart';
+import 'achievements_screen.dart';
 import 'all_workout_logs_screen.dart';
 import 'exercise_progress_screen.dart';
 import 'photo_progress_screen.dart';
+import 'weight_progress_screen.dart';
 
 class ProgressScreen extends StatelessWidget {
   const ProgressScreen({super.key});
@@ -335,13 +337,23 @@ class _ProgressContentState extends State<_ProgressContent> {
               const SizedBox(height: 8),
               
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const WeightScreen()),
+                  );
+                },
                 child: const Text('⚖️ Вес и тело'),
               ),
               const SizedBox(height: 8),
 
               ElevatedButton(
-                onPressed: () {},
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const AchievementsScreen()),
+                  );
+                },
                 child: const Text('🏅 Достижения'),
               ),
             ],

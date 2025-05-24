@@ -84,6 +84,7 @@ class UserService {
 
 class UserSettingsStorage {
   static const _keyRequireWeights = 'require_weights_in_sets';
+  static const _autoUpdateWeightKey = 'auto_update_weight';
 
   Future<bool> getRequireWeightsInSets() async {
     final prefs = await SharedPreferences.getInstance();
@@ -93,5 +94,15 @@ class UserSettingsStorage {
   Future<void> setRequireWeightsInSets(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(_keyRequireWeights, value);
+  }
+
+  Future<bool> getAutoUpdateWeight() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_autoUpdateWeightKey) ?? true; // по умолчанию ВКЛ
+  }
+
+  Future<void> setAutoUpdateWeight(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_autoUpdateWeightKey, value);
   }
 }

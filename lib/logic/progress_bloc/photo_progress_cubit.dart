@@ -3,47 +3,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../data/models/photo_progress_entry.dart';
 import '../../data/repositories/photo_progress_repository.dart';
 
-// class PhotoProgressState {
-//   final List<PhotoProgressEntry> entries;
-//   final bool isLoading;
-
-//   PhotoProgressState({
-//     required this.entries,
-//     required this.isLoading,
-//   });
-
-//   factory PhotoProgressState.initial() =>
-//       PhotoProgressState(entries: [], isLoading: true);
-// }
-
-// class PhotoProgressCubit extends Cubit<PhotoProgressState> {
-//   final PhotoProgressRepository repository;
-
-//   PhotoProgressCubit({required this.repository})
-//       : super(PhotoProgressState.initial()) {
-//     loadEntries();
-//   }
-
-//   Future<void> loadEntries() async {
-//     emit(PhotoProgressState(entries: state.entries, isLoading: true));
-//     final entries = await repository.loadEntries();
-//     emit(PhotoProgressState(entries: entries, isLoading: false));
-//   }
-
-//   Future<void> addEntry(PhotoProgressEntry entry) async {
-//     final updated = List<PhotoProgressEntry>.from(state.entries)..add(entry);
-//     await repository.saveEntries(updated);
-//     emit(PhotoProgressState(entries: updated, isLoading: false));
-//   }
-
-//   Future<void> deleteEntry(PhotoProgressEntry entry) async {
-//     await repository.deleteEntry(entry);
-//     final updated = List<PhotoProgressEntry>.from(state.entries)
-//       ..removeWhere((e) => e.path == entry.path);
-//     emit(PhotoProgressState(entries: updated, isLoading: false));
-//   }
-// }
-
 class PhotoProgressState {
   final List<PhotoProgressEntry> allEntries;
   final List<PhotoProgressEntry> filteredEntries;

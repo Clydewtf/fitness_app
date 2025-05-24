@@ -1,11 +1,16 @@
 import 'dart:ui';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fitness_app/data/models/workout_session_model.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/utils.dart';
 import '../../../data/models/workout_log_model.dart';
+import '../../../data/repositories/body_log_repository.dart';
+import '../../../data/repositories/photo_progress_repository.dart';
 import '../../../data/repositories/workout_log_repository.dart';
 import '../../../logic/progress_bloc/progress_cubit.dart';
+import '../../../services/achievement_service.dart';
+import '../../../services/auth_service.dart';
 import 'workout_log_edit_sheet.dart';
 
 Future<void> showWorkoutLogDialog(BuildContext context, WorkoutLog log) async {
@@ -199,6 +204,23 @@ class WorkoutLogDialogContent extends StatelessWidget {
                             final repository = WorkoutLogRepository();
                             await repository.updateWorkoutLog(updatedLog);
                             cubit.updateLog(updatedLog);
+
+                            // ⬇️ Обновляем ачивки
+                            final uid = AuthService().getCurrentUser()?.uid;
+                            if (uid == null) return;
+
+                            final workoutLogs = await WorkoutLogRepository().getWorkoutLogs(uid);
+                            final photoLogs = await PhotoProgressRepository().loadEntries();
+                            final bodyLogs = await BodyLogRepository(
+                              firestore: FirebaseFirestore.instance,
+                              userId: uid,
+                            ).loadLogs();
+
+                            await AchievementService().checkAndUpdateAchievements(
+                              workoutLogs: workoutLogs,
+                              photoEntries: photoLogs,
+                              bodyLogs: bodyLogs,
+                            );
                           }
                         },
                         child: Text(_isFullyFilled(log) ? "Редактировать" : "Дополнить"),
