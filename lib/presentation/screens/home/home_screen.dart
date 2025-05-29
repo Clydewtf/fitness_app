@@ -19,7 +19,6 @@ import '../../widgets/workouts/workout_session_mini_player.dart';
 import '../workouts/workout_screen.dart';
 import '../nutrition/nutrition_screen.dart';
 import '../progress/progress_screen.dart';
-import '../profile/profile_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
 import 'dashboard_screen.dart';

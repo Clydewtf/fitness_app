@@ -47,5 +47,14 @@
 	<string>Приложению нужен доступ к камере для добавления фото прогресса</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Приложению нужен доступ к фото, чтобы выбрать изображения</string>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
 </dict>
 </plist>
