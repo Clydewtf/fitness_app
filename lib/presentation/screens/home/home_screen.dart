@@ -1,7 +1,10 @@
+import 'package:fitness_app/data/repositories/photo_progress_repository.dart';
+import 'package:fitness_app/services/daily_workout_service.dart';
 import 'package:flutter/material.dart';
 import '../../../core/locator.dart';
 import '../../../data/models/workout_session_model.dart';
 import '../../../data/repositories/my_workout_repository.dart';
+import '../../../data/repositories/workout_log_repository.dart';
 import '../../../data/repositories/workout_repository.dart';
 import '../../../logic/auth_bloc/auth_state.dart';
 import '../../../logic/workout_bloc/my_workout_bloc.dart';
@@ -10,6 +13,7 @@ import '../../../logic/workout_bloc/workout_bloc.dart';
 import '../../../logic/workout_bloc/workout_event.dart';
 import '../../../logic/workout_bloc/workout_session_bloc.dart';
 import '../../../logic/workout_bloc/workout_session_state.dart';
+import '../../../services/achievement_service.dart';
 import '../../../services/user_service.dart';
 import '../../widgets/workouts/workout_session_mini_player.dart';
 import '../workouts/workout_screen.dart';
@@ -18,6 +22,7 @@ import '../progress/progress_screen.dart';
 import '../profile/profile_screen.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../logic/auth_bloc/auth_bloc.dart';
+import 'dashboard_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final bool showReminderBanner;
@@ -36,7 +41,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final GlobalKey _navBarKey = GlobalKey();
   double _navBarHeight = kBottomNavigationBarHeight;
 
-  // Список экранов
+  // ✅ Обновлённый список экранов
   late final List<Widget> _screens;
 
   @override
@@ -44,13 +49,12 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
 
     _screens = [
-      WorkoutScreen(),
-      NutritionScreen(),
-      ProgressScreen(),
-      ProfileScreen(),
+      DashboardScreen(),      // 0
+      WorkoutScreen(),        // 1
+      NutritionScreen(),      // 2
+      ProgressScreen(),       // 3
     ];
 
-    // 👇 Показываем SnackBar, если нужно напомнить
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (widget.showReminderBanner) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -60,7 +64,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         );
       }
-      // TODO: доделать логику с дозаполнением настроения и прочего после тренировки для сохранения
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -95,21 +98,26 @@ class _HomeScreenState extends State<HomeScreen> {
           userService: locator.get<UserService>(),
           uid: authState.user.uid,
         )..add(LoadWorkouts())),
+        BlocProvider(
+          create: (_) => AchievementCubit(
+            service: locator.get<AchievementService>(),
+            workoutLogRepo: locator.get<WorkoutLogRepository>(),
+            photoRepo: locator.get<PhotoProgressRepository>(),
+            userId: authState.user.uid,
+          )..loadAchievements(),
+        ),
         BlocProvider(create: (_) => MyWorkoutBloc(locator.get<MyWorkoutRepository>())..add(LoadMyWorkouts(authState.user.uid))),
         BlocProvider(create: (_) => WorkoutSessionBloc()),
+        BlocProvider(create: (_) => DailyWorkoutRefreshCubit()),
       ],
 
       child: Scaffold(
         resizeToAvoidBottomInset: true,
 
-        // ✅ Вместо SafeArea сразу Stack
         body: Stack(
           children: [
-            SafeArea(
-              child: _screens[_selectedIndex],
-            ),
+            SafeArea(child: _screens[_selectedIndex]),
 
-            // ✅ Мини-плеер поверх всего, но выше bottomNavigationBar
             BlocBuilder<WorkoutSessionBloc, WorkoutSessionState>(
               builder: (context, state) {
                 final session = state.session;
@@ -136,7 +144,6 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
 
-        // 🔻 Нижняя навигация остаётся как есть
         bottomNavigationBar: SafeArea(
           child: Container(
             key: _navBarKey,
@@ -149,8 +156,8 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
-                _buildNavItem(Icons.fitness_center, "Тренировки", 0),
-                _buildNavItem(Icons.fastfood, "Питание", 1),
+                _buildNavItem(Icons.home, "Главная", 0),
+                _buildNavItem(Icons.fitness_center, "Тренировки", 1),
                 GestureDetector(
                   onTap: () {
                     // TODO: Открытие быстрого добавления
@@ -173,8 +180,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: const Icon(Icons.add, color: Colors.white, size: 30),
                   ),
                 ),
-                _buildNavItem(Icons.bar_chart, "Прогресс", 2),
-                _buildNavItem(Icons.person, "Профиль", 3),
+                _buildNavItem(Icons.fastfood, "Питание", 2),
+                _buildNavItem(Icons.bar_chart, "Прогресс", 3),
               ],
             ),
           ),

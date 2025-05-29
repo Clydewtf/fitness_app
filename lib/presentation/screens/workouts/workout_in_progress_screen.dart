@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fitness_app/data/repositories/workout_repository.dart';
+import 'package:fitness_app/services/daily_workout_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -13,10 +15,14 @@ import '../../../data/repositories/body_log_repository.dart';
 import '../../../data/repositories/exercise_repository.dart';
 import '../../../data/repositories/photo_progress_repository.dart';
 import '../../../data/repositories/workout_log_repository.dart';
+import '../../../logic/workout_bloc/my_workout_bloc.dart';
+import '../../../logic/workout_bloc/my_workout_state.dart';
+import '../../../logic/workout_bloc/workout_bloc.dart';
 import '../../../logic/workout_bloc/workout_session_bloc.dart';
 import '../../../data/models/workout_session_model.dart';
 import '../../../logic/workout_bloc/workout_session_event.dart';
 import '../../../logic/workout_bloc/workout_session_state.dart';
+import '../../../logic/workout_bloc/workout_state.dart';
 import '../../../services/achievement_service.dart';
 import '../../../services/auth_service.dart';
 import '../../../services/user_service.dart';
@@ -114,6 +120,10 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                 final duration = state.session!.endTime!.difference(state.session!.startTime);
                 final workoutLogRepository = locator<WorkoutLogRepository>();
                 final authService = locator<AuthService>();
+                final dailyWorkoutService = locator<DailyWorkoutService>();
+                final myWorkoutState = context.read<MyWorkoutBloc>().state;
+                final workoutState = context.read<WorkoutBloc>().state;
+                final cubit = locator<DailyWorkoutRefreshCubit>();
 
                 Future.delayed(const Duration(milliseconds: 500), () {
                   WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -168,6 +178,21 @@ class _WorkoutInProgressScreenState extends State<WorkoutInProgressScreen> {
                             );
 
                             await workoutLogRepository.saveWorkoutLog(log);
+
+                            if (myWorkoutState is MyWorkoutLoaded && workoutState is WorkoutLoaded) {
+                              final myFavorites = myWorkoutState.workouts.where((w) => w.isFavorite).toList();
+                              final globalFavorites = workoutState.workouts.where((w) => w.isFavorite).toList();
+
+                              final favorites = [
+                                ...globalFavorites.map((w) => (w, false)),
+                                ...myFavorites.map((w) => (w, true)),
+                              ];
+
+                              if (favorites.isEmpty) return;
+
+                              await dailyWorkoutService.goToNextWorkout(favorites);
+                              cubit.refresh();
+                            }
 
                             // ⬇️ Добавим вес в BodyLog, если он указан
                             if (weight != null) {

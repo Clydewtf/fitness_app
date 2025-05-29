@@ -19,11 +19,14 @@ import '../../screens/workouts/workout_in_progress_screen.dart';
 class WorkoutCard extends StatelessWidget {
   final Workout workout;
   final bool isMyWorkout;
+  final bool canToggleFavorite;
+
 
   const WorkoutCard({
     super.key,
     required this.workout,
     this.isMyWorkout = false,
+    this.canToggleFavorite = true,
   });
 
   @override
@@ -52,6 +55,7 @@ class WorkoutCard extends StatelessWidget {
                   child: WorkoutDetailScreen(
                     workout: workout,
                     isMyWorkout: isMyWorkout,
+                    canToggleFavorite: canToggleFavorite,
                   ),
                 ),
               ),
@@ -81,6 +85,14 @@ class WorkoutCard extends StatelessWidget {
                         ? BlocBuilder<MyWorkoutBloc, MyWorkoutState>(
                             builder: (context, state) {
                               final isFavorite = workout.isFavorite;
+
+                              if (!canToggleFavorite) {
+                                return Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.amber,
+                                );
+                              }
+
                               return IconButton(
                                 icon: Icon(
                                   isFavorite
@@ -105,6 +117,14 @@ class WorkoutCard extends StatelessWidget {
                               final isFavorite = state is WorkoutLoaded &&
                                   state.favoriteWorkoutIds
                                       .contains(workout.id);
+                              
+                              if (!canToggleFavorite) {
+                                return Icon(
+                                  Icons.star_rounded,
+                                  color: Colors.amber,
+                                );
+                              }
+                              
                               return IconButton(
                                 icon: Icon(
                                   isFavorite
@@ -290,10 +310,18 @@ class WorkoutCard extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (_) {
-          final bloc = context.read<WorkoutSessionBloc>();
-          bloc.add(StartWorkoutSession(workout, goal));
-          return BlocProvider.value(
-            value: bloc,
+          final sessionBloc = context.read<WorkoutSessionBloc>();
+          final myWorkoutBloc = context.read<MyWorkoutBloc>();
+          final workoutBloc = context.read<WorkoutBloc>();
+
+          sessionBloc.add(StartWorkoutSession(workout, goal));
+
+          return MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: sessionBloc),
+              BlocProvider.value(value: myWorkoutBloc),
+              BlocProvider.value(value: workoutBloc),
+            ],
             child: const WorkoutInProgressScreen(),
           );
         },

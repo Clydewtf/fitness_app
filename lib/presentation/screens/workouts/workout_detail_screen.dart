@@ -20,11 +20,13 @@ import '../../widgets/workouts/exercise_card.dart';
 class WorkoutDetailScreen extends StatefulWidget {
   final Workout workout;
   final bool isMyWorkout;
+  final bool canToggleFavorite;
 
   const WorkoutDetailScreen({
     super.key,
     required this.workout,
     this.isMyWorkout = false,
+    this.canToggleFavorite = true,
   });
 
   @override
@@ -64,7 +66,6 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
         isLoadingExercises = false;
       });
     } catch (e) {
-      print("Ошибка загрузки упражнений: $e");
       setState(() => isLoadingExercises = false);
     }
   }
@@ -91,34 +92,45 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
                 appBar: AppBar(
                   title: Text(workoutA.name),
                   actions: [
-                    IconButton(
-                      icon: Icon(
-                        isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
-                        color: Colors.amber,
-                      ),
-                      onPressed: () {
+                    Builder(
+                      builder: (context) {
                         final authState = context.read<AuthBloc>().state;
 
-                        if (widget.isMyWorkout) {
-                          if (authState is Authenticated) {
-                            context.read<MyWorkoutBloc>().add(
-                              ToggleFavoriteMyWorkout(
-                                uid: authState.user.uid,
-                                workoutId: workout.id,
-                                isFavorite: !isFavorite,
-                              ),
-                            );
-                          }
-                        } else {
-                          context.read<WorkoutBloc>().add(
-                            ToggleFavoriteWorkout(
-                              workoutId: workout.id,
-                              isFavorite: !isFavorite,
-                            ),
+                        if (!widget.canToggleFavorite) {
+                          return const Padding(
+                            padding: EdgeInsets.only(right: 16),
+                            child: Icon(Icons.star_rounded, color: Colors.amber),
                           );
                         }
+
+                        return IconButton(
+                          icon: Icon(
+                            isFavorite ? Icons.star_rounded : Icons.star_border_rounded,
+                            color: Colors.amber,
+                          ),
+                          onPressed: () {
+                            if (widget.isMyWorkout) {
+                              if (authState is Authenticated) {
+                                context.read<MyWorkoutBloc>().add(
+                                  ToggleFavoriteMyWorkout(
+                                    uid: authState.user.uid,
+                                    workoutId: workout.id,
+                                    isFavorite: !isFavorite,
+                                  ),
+                                );
+                              }
+                            } else {
+                              context.read<WorkoutBloc>().add(
+                                ToggleFavoriteWorkout(
+                                  workoutId: workout.id,
+                                  isFavorite: !isFavorite,
+                                ),
+                              );
+                            }
+                          },
+                        );
                       },
-                    )
+                    ),
                   ],
                 ),
                 body: SingleChildScrollView(
@@ -268,7 +280,7 @@ class _WorkoutDetailScreenState extends State<WorkoutDetailScreen> {
 
                                       if (!mounted) return;
 
-                                      if (confirmed == true) {
+                                      if (confirmed == true && context.mounted) {
                                         final authState = context.read<AuthBloc>().state;
 
                                         if (authState is Authenticated) {

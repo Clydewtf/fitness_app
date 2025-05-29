@@ -1,9 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fitness_app/data/repositories/body_log_repository.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+
 import '../data/models/achievement_model.dart';
 import '../data/models/body_log.dart';
 import '../data/models/photo_progress_entry.dart';
 import '../data/models/workout_log_model.dart';
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
+
+import '../data/repositories/photo_progress_repository.dart';
+import '../data/repositories/workout_log_repository.dart';
 
 class AchievementService {
   static const _prefsKey = 'user_achievements';
@@ -153,5 +160,36 @@ class AchievementService {
     final List<String>? saved = prefs.getStringList(_prefsKey);
     if (saved == null) return [];
     return saved.map((s) => Achievement.fromJson(jsonDecode(s))).toList();
+  }
+}
+
+class AchievementCubit extends Cubit<List<Achievement>> {
+  final AchievementService service;
+  final WorkoutLogRepository workoutLogRepo;
+  final PhotoProgressRepository photoRepo;
+  final String userId;
+
+  AchievementCubit({
+    required this.service,
+    required this.workoutLogRepo,
+    required this.photoRepo,
+    required this.userId,
+  }) : super([]);
+
+  Future<void> loadAchievements() async {
+    final workoutLogs = await workoutLogRepo.getWorkoutLogs(userId);
+    final photoLogs = await photoRepo.loadEntries();
+    final bodyLogs = await BodyLogRepository(
+      firestore: FirebaseFirestore.instance,
+      userId: userId,
+    ).loadLogs();
+
+    final achievements = await service.checkAndUpdateAchievements(
+      workoutLogs: workoutLogs,
+      photoEntries: photoLogs,
+      bodyLogs: bodyLogs,
+    );
+
+    emit(achievements);
   }
 }

@@ -31,6 +31,18 @@ class UserService {
     return null;
   }
 
+  Future<String?> getUserGoal(String uid) async {
+    final doc = await _firestore.collection('users').doc(uid).get();
+    if (doc.exists) {
+      final data = doc.data() as Map<String, dynamic>;
+      final goal = data['goal'];
+      if (goal != null && goal is String && goal.isNotEmpty) {
+        return goal;
+      }
+    }
+    return null;
+  }
+
   // Сохраняем фото локально
   Future<String?> saveProfileImage(File imageFile) async {
     try {
