@@ -143,47 +143,71 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
 
-        bottomNavigationBar: SafeArea(
-          child: Container(
-            key: _navBarKey,
-            decoration: BoxDecoration(
-              color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
-              borderRadius: const BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-              boxShadow: [BoxShadow(color: Colors.black.withAlpha(38), blurRadius: 10, spreadRadius: 2)],
+        bottomNavigationBar: Stack(
+          children: [
+            // 1. Фон, полностью до самого низа экрана (включая home indicator)
+            Positioned.fill(
+              child: Container(
+                color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
+              ),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildNavItem(Icons.home, "Главная", 0),
-                _buildNavItem(Icons.fitness_center, "Тренировки", 1),
-                GestureDetector(
-                  onTap: () {
-                    // TODO: Открытие быстрого добавления
-                  },
-                  child: Container(
-                    height: 50,
-                    width: 50,
-                    margin: const EdgeInsets.symmetric(horizontal: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.2),
-                          blurRadius: 6,
-                          offset: const Offset(0, 3),
-                        )
-                      ],
-                    ),
-                    child: const Icon(Icons.add, color: Colors.white, size: 30),
+
+            // 2. Само меню, с паддингом под home indicator, но без лишнего скругления и тени
+            SafeArea(
+              top: false,
+              child: Container(
+                key: _navBarKey,
+                decoration: BoxDecoration(
+                  color: Theme.of(context).bottomNavigationBarTheme.backgroundColor ?? Colors.white,
+                  // ⚠️ либо убери скругления, либо оставь минимальные
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(12),
+                    topRight: Radius.circular(12),
                   ),
+                  // Можно либо убрать тень, либо сделать её выше
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      blurRadius: 4,
+                      offset: const Offset(0, -2),
+                    ),
+                  ],
                 ),
-                _buildNavItem(Icons.fastfood, "Питание", 2),
-                _buildNavItem(Icons.bar_chart, "Прогресс", 3),
-              ],
+                padding: const EdgeInsets.only(top: 10, bottom: 10),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildNavItem(Icons.home, "Главная", 0),
+                    _buildNavItem(Icons.fitness_center, "Тренировки", 1),
+                    GestureDetector(
+                      onTap: () {
+                        // TODO: Открытие быстрого добавления
+                      },
+                      child: Container(
+                        height: 50,
+                        width: 50,
+                        margin: const EdgeInsets.symmetric(horizontal: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.blue,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 6,
+                              offset: const Offset(0, 3),
+                            )
+                          ],
+                        ),
+                        child: const Icon(Icons.add, color: Colors.white, size: 30),
+                      ),
+                    ),
+                    _buildNavItem(Icons.fastfood, "Питание", 2),
+                    _buildNavItem(Icons.bar_chart, "Прогресс", 3),
+                  ],
+                ),
+              ),
             ),
-          ),
+          ],
         ),
       ),
     );

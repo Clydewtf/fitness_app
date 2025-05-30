@@ -19,6 +19,7 @@ import 'presentation/screens/auth/login_screen.dart';
 import 'presentation/screens/home/home_screen.dart';
 import 'services/notification_service.dart';
 import 'services/subscription_notification_service.dart';
+import 'package:device_preview/device_preview.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -39,7 +40,12 @@ void main() async {
   await subscriptionNotificationService.reloadScheduledSubscriptionNotifications();
 
   setupLocator(); // Инициализируем DI перед запуском приложения
-  runApp(const MyApp());
+  runApp(
+    // DevicePreview(builder: (context) {
+    //   return const MyApp();
+    // })
+    const MyApp()
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -58,6 +64,8 @@ class MyApp extends StatelessWidget {
         builder: (context, state) {
           bool isDarkMode = state is ThemeUpdated && state.isDarkMode;
           return MaterialApp(
+            // locale: DevicePreview.locale(context),
+            // builder: DevicePreview.appBuilder,
             title: 'Фитнес-приложение',
             theme: isDarkMode ? AppTheme.darkTheme : AppTheme.lightTheme,
             home: const AuthWrapper(),

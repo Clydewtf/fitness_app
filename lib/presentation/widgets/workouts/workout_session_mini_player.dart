@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../data/models/workout_session_model.dart';
@@ -32,6 +34,7 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
   late double _screenHeight;
   final GlobalKey _playerKey = GlobalKey();
   double _playerHeight = 0;
+  bool get isIosSimulation => true;
 
   @override
   void initState() {
@@ -59,8 +62,13 @@ class _WorkoutSessionMiniPlayerState extends State<WorkoutSessionMiniPlayer> wit
         // Верхняя якорная точка — чуть ниже статус-бара
         return viewPadding.top + 50;
       case PlayerAnchor.initial:
-        // Нижняя — прямо над нижним меню
-        return _screenHeight - _playerHeight - widget.navBarHeight * 2 - extraPadding;
+        if (isIosSimulation) {
+          // Для iOS: нижнее меню выше из-за SafeArea
+          return _screenHeight - _playerHeight - widget.navBarHeight * 2.5 - viewPadding.bottom - extraPadding;
+        } else {
+          // Для Android
+          return _screenHeight - _playerHeight - widget.navBarHeight * 2 - viewPadding.bottom - extraPadding;
+        }
     }
   }
 

@@ -265,13 +265,10 @@ class _WorkoutCardBlockState extends State<_WorkoutCardBlock> {
                   canToggleFavorite: false,
                 ),
                 Center(
-                  child: OutlinedButton.icon(
+                  child: TextButton.icon(
                     onPressed: _switchWorkout,
                     icon: Icon(Icons.refresh),
                     label: Text('Сменить'),
-                    style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
                   )
                 ),
               ],
